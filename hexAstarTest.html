@@ -1,0 +1,333 @@
+<!DOCTYPE>  
+<html>  
+<style type="text/css">
+	* { margin: 0; padding: 0; }
+	html, body { height: 100%; width: 100%; }
+	
+	body
+	{
+		background-color: #FFFFFF;
+		-moz-user-select:   none; 
+	}
+</style>	
+<head>  
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>  
+<title>Hexgon astar test</title>  
+
+<script type="text/javascript" src="js/commonFuncs.js"></script> 
+<script type="text/javascript" src="js/hexagonClass.js"></script> 
+<script type="text/javascript" src="js/hexagonClass2.js"></script> 
+<script type="text/javascript" src="js/astarClass.js"></script> 
+
+<script type="text/javascript" > 
+ 
+//Rows and cols
+var REGION_ROWS = 10;
+var REGION_COLS = 10;
+
+//Grid width and height
+var GRID_W = 60;
+var GRID_H = 50;
+
+var OFFSET_X = 30;
+var OFFSET_Y = 30;
+
+//Canvas width and height
+var BK_W = GRID_W * REGION_COLS + 2*OFFSET_X;
+var BK_H = GRID_H * REGION_COLS + 2*OFFSET_Y;;
+
+var background;
+var ctx = null;
+
+var grids = []; //Data
+var astar = null;
+var hexagon = null;
+
+//Start and end
+var startRow = -1;
+var startCol = -1;
+var endRow = -1;
+var endCol = -1;
+
+window.onload = function()
+{   
+	background = document.getElementById('background');
+	background.setAttribute("width",BK_W);
+	background.setAttribute("height",BK_H);
+	
+	ctx = background.getContext('2d');
+	
+	initGrids(); //Initial data
+	
+	astar = new AStar(); 
+	//astar.hexFlag = 1; // 0: block ; 1: h-hex; 2: v-hex
+	//hexagon = new Hexagon();
+	
+	astar.hexFlag = 2; // 0: block ; 1: h-hex; 2: v-hex
+	hexagon = new Hexagon2();
+
+	hexagon.init(REGION_COLS, REGION_ROWS, 30);
+
+	//hexagon.drawAll(ctx, 'red', 2);
+	hexagon.drawAssistantLine(ctx);
+	updateAll(ctx);
+	
+	addClickEvent(background, showClickPos);
+}; 
+
+function initGrids()
+{
+	grids = [];
+	for(var i=0; i<REGION_COLS; i++)
+	{
+		var gridRow = [];
+		for(var j=0; j<REGION_ROWS; j++)
+		{
+			gridRow.push(AS_UNUSE);
+		}
+		grids.push(gridRow);
+	}
+}
+
+function resetGrid(col, row)
+{
+	if((col < 0) || (col >= REGION_COLS))
+		return;
+	if((row < 0) || (row >= REGION_ROWS))
+		return;
+	
+	//Set blank
+	grids[row][col] = AS_UNUSE;
+}
+
+function showClickPos(cx, cy)
+{
+	var pos = hexagon.getGridPos(cx, cy);
+	var col = pos[0];
+	var row = pos[1];
+	
+	if(col < 0 || (col >= REGION_COLS))
+		return;
+	if(row < 0 || (row >= REGION_ROWS))
+		return;
+	
+	var type = getRegionType();
+		
+	//Only one start and one end
+	if( type == AS_START) 
+	{
+		if((row == endRow) && (col == endCol))
+		{
+			alert('Start overlap with end');
+			return;
+		}
+		resetGrid(startCol, startRow);
+		startRow = row;
+		startCol = col;
+	}
+	else if(type == AS_END)
+	{
+		if((row == startRow) && (col == startCol))
+		{
+			alert('End overlap with start');
+			return;
+		}
+		resetGrid(endCol, endRow);
+		endRow = row;
+		endCol = col;
+	}	
+	else
+	{
+		if((row == endRow) && (col == endCol))
+		{
+			endRow = -1;
+			endCol = -1;
+		}
+		if((row == startRow) && (col == startCol))
+		{
+			startRow = -1;
+			startCol = -1;
+		}
+	}
+	
+	grids[row][col] = type;
+	updateAll(ctx);
+};
+
+function addClickEvent(canvas, callBack)
+{
+	canvas.onmousedown = function(ev){ 
+		var offsets = findPos(this);
+		var cx = ev.pageX - offsets.left;
+		var cy = ev.pageY - offsets.top;
+		
+		callBack(cx, cy);
+	}
+}
+
+function getRegionType()
+{
+	if(document.getElementById("obstacle").checked)
+		return AS_CLOSE;
+	else if(document.getElementById("start").checked)
+		return AS_START;
+	else if(document.getElementById("end").checked)
+		return AS_END;
+	else if(document.getElementById("blank").checked)
+		return AS_UNUSE;
+}
+
+function startAStar()
+{
+	astar.init(REGION_COLS, REGION_ROWS, grids);
+	var result = astar.startFind();
+	if(result == 0)
+		alert('No path');
+	else if(result == -1)
+		alert('Error');
+	else if(result == 1)
+	{
+		showAStarPath(astar.getPath());
+	}
+}
+
+function resetAStar()
+{
+	initGrids();
+	updateAll(ctx);
+}
+
+function clearResult()
+{
+	updateAll(ctx);
+}
+	
+function updateAll(ctx)
+{
+	for(var i=0; i<REGION_COLS; i++)
+	{
+		for(var j=0; j<REGION_ROWS; j++)
+		{
+			updateGrid(ctx, i, j, grids[j][i]);
+		}
+	}
+}	
+
+function updateGrid(ctx, col, row, type)
+{
+	if(type == AS_CLOSE)
+		hexagon.drawGrid(ctx, col, row, 'grey', 'black', 3);
+	else if(type == AS_START)
+		hexagon.drawGrid(ctx, col, row, 'red', 'black', 3);
+	else if(type == AS_END)
+		hexagon.drawGrid(ctx, col, row, 'green', 'black', 3);
+	else if(type == AS_UNUSE)
+		hexagon.drawGrid(ctx, col, row, 'white', 'black', 3);
+}	
+
+function isInRange(path, range)
+{
+	if(path.length > range)
+		return false;
+	
+	var col = path[0].col;
+	var row = path[0].row;
+	
+	var colFlag = true;
+	var rowFlag = true;
+	
+	for(var i=1; i<path.length; i++)
+	{
+		var nextNode = path[i];
+		if(nextNode.col != col)
+		{
+			colFlag = false;
+			break;
+		}
+	}
+	
+	for(var i=1; i<path.length; i++)
+	{
+		var nextNode = path[i];
+		if(nextNode.row != row)
+		{
+			rowFlag = false;
+			break;
+		}
+	}
+	
+	return colFlag || rowFlag;
+}
+
+function showAStarPath(path) //Show path from parent pointer
+{
+	var shootFlag = isInRange(path, 5);
+	ctx.save();
+	ctx.beginPath();
+	
+	if(shootFlag)
+		ctx.strokeStyle = 'yellow';
+	else
+		ctx.strokeStyle = 'black';
+		
+	ctx.lineWidth = 3;
+
+	
+	var node = path[0];
+	for(var i=1; i<path.length; i++)
+	{
+		var nextNode = path[i];
+		
+		//Draw line between start and end region
+		var p0 = hexagon.getCenter(node.col, node.row);
+		var p1 = hexagon.getCenter(nextNode.col, nextNode.row);
+		ctx.moveTo(p0.cx, p0.cy);
+		ctx.lineTo(p1.cx, p1.cy);
+	
+		node = nextNode;
+	}
+	
+	ctx.stroke();
+	ctx.fill();
+	ctx.closePath();
+	ctx.restore();
+}
+
+</script>  
+</head>  
+  
+<body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
+	<canvas id="background" style="position:absolute">Your browser not support HTML5, please upgrade.</canvas>  
+	<div style="position:absolute;left:100px;top:550px;-moz-user-select:none;-webkit-user-select:none;">
+    <label>Set grid type:</label>            
+          <input type = "radio"
+                 name = "radSize"
+                 id = "start"
+                 value = "start" 
+				 checked = "checked" />
+          <label for = "start">start</label>
+		  
+		  <input type = "radio"
+                 name = "radSize"
+                 id = "obstacle"
+                 value = "obstacle" />
+          <label for = "obstacle">obstacle</label>
+		  
+          <input type = "radio"
+                 name = "radSize"
+                 id = "end"
+                 value = "end" />
+          <label for = "end">end</label>
+		 
+          <input type = "radio"
+                 name = "radSize"
+                 id = "blank"
+                 value = "blank" />
+          <label for = "blank">blank</label>
+    </div>
+    <input type="button" onclick="startAStar()" style="position:absolute;left:320px;top:600px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start find">
+    <input type="button" onclick="clearResult()" style="position:absolute;left:400px;top:600px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Clear Result">
+    <input type="button" onclick="resetAStar()" style="position:absolute;left:500px;top:600px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Clear all">
+</body>   
+</html>  

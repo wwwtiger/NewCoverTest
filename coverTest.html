@@ -1,0 +1,495 @@
+<!DOCTYPE>  
+<html>  
+<style type="text/css">
+	* { margin: 0; padding: 0; }
+	html, body { height: 100%; width: 100%; }
+	
+	body
+	{
+		background-color: #000000;
+		-moz-user-select:   none; 
+	}
+</style>	
+<head>  
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>  
+<title>CoverTest</title>  
+
+
+<script type="text/javascript" src="js/commonFuncs.js"></script>  
+<script type="text/javascript" src="js/resList.js"></script> 
+<script type="text/javascript" src="js/parameters.js"></script> 
+<script type="text/javascript" src="js/animate.js"></script>   
+<script type="text/javascript" src="js/canvasGui.js"></script> 
+<script type="text/javascript" src="js/hexagonMap.js"></script> 
+<script type="text/javascript" src="js/astarClass.js"></script> 
+
+<script type="text/javascript" > 
+ 
+ 
+	var animateList	= [];
+	
+	var BK_W = 1000;
+	var BK_H = 600;
+	
+	var FRAME_UPDATE_INTERVALE = 15;
+	var background, container, infoCanvas;
+		
+	var screenWidth;//
+	var screenHeight;//
+	   
+	var gameRunning = false;//
+	var loadedImages = 0;  
+
+	var frameCount = 0;
+	var gameTimer, fpsTimer;
+	var loopFunc = [];
+	
+	//scale para for user event(mouse, touch)
+	var x_s = 1, y_s = 1, scale;
+	var raf = false;
+	
+	function preRender()
+	{
+		for(index in animatePara)
+		{
+			var para = animatePara[index];
+			if(para.alpha == 1)
+			{
+				var animate = new PngAnimate(imageList[para.imgIndex].obj, para.frameCount, para.interval, para.offsetX, para.offsetY);
+				animate.initial();
+				animateList.push(animate);
+			}
+			else
+			{
+				var animate = new PngAnimate(imageList[para.imgIndex].obj, para.frameCount, para.interval, para.offsetX, para.offsetY);
+				animate.initial(para.alpha);
+				animateList.push(animate);
+			}
+		}
+		
+		var newAnimate = new PngAnimate2(newAnimatePara);
+		newAnimate.initial(imageList);
+		animateList.push(newAnimate);
+		
+		var tweenAnimate = new PngAnimate3(tweenAnimatePara);
+		tweenAnimate.initial(imageList);
+		animateList.push(tweenAnimate);
+		
+		var tweenAnimate2 = new PngAnimate3(tweenAnimatePara2);
+		tweenAnimate2.initial(imageList);
+		animateList.push(tweenAnimate2);
+
+		//4
+		var sketchupAnimate = new PngAnimate4(sketchupAnimatePara);
+		sketchupAnimate.initial(imageList);
+		animateList.push(sketchupAnimate);
+		
+		var bkCtx = background.getContext('2d'); 
+		
+		
+		//bkCtx.drawImage(tweenAnimate.canvas, 0, 0);
+		//bkCtx.drawImage(sketchupAnimate.canvas, 0, 150);
+		//bkCtx.drawImage(tweenAnimate6.canvas, 0, 300);
+		//bkCtx.drawImage(tweenAnimate4.canvas, 0, 450);
+		drawMap(bkCtx, mapPara);
+	}
+	
+	function loadImages(callback)
+	{  
+		var infoCanvas = document.createElement('canvas');  
+			
+		infoCanvas.style.position = "absolute"; 
+		infoCanvas.setAttribute("width",BK_W);
+		infoCanvas.setAttribute("height",BK_H);
+		infoCanvas.style.width = window.innerWidth + 'px';
+		infoCanvas.style.height = window.innerHeight + 'px';
+		
+		var context = infoCanvas.getContext('2d'); 
+		
+		context.font = "bold 30px cursive";
+		context.fillStyle = "green";
+		context.fillText("Loading... 0%", infoCanvas.width / 3 + 100, infoCanvas.height / 3 + 50);
+		
+		document.body.appendChild(infoCanvas);
+		
+		var loadedImages = 0;
+		var imgNum = imageList.length;
+		
+		for (var index in imageList) {  
+			var imageObj = imageList[index];
+			imageObj.obj = new Image();
+				
+			imageObj.obj.onload = function(){  
+				if (++loadedImages >= imgNum){ 
+					//delete loading layer
+					document.body.removeChild(infoCanvas);
+					infoCanvas = null;
+					
+					callback(); 
+				} 
+				else	
+				{
+					context.clearRect(0, 0, infoCanvas.width, infoCanvas.height);
+			
+					var loadPresent = "Loading... " + quickRound(loadedImages / imgNum * 100) + "%";
+					context.fillText(loadPresent, infoCanvas.width / 3 + 100, infoCanvas.height / 3 + 50);
+				} 
+			};  
+		        
+			//imageObj.obj.src = imageObj.src;  
+			imageObj.obj.src = imageObj.path + "/" + imageObj.name + "." + imageObj.ext;  
+		}  
+	}  
+
+
+ 	//Update the display to show frames per second and reset ready for next count
+	function fps(time)
+	{
+		if(gameRunning == false)
+			return 0;
+		
+		var start = new Date().getTime();
+		
+		frameCount=0;
+		
+		var loopUse =new Date().getTime() - start;
+		return loopUse;
+	}
+  
+	
+	function mainLoop()
+	{	
+		if(loopFunc[0] != null)
+			return loopFunc[0]();
+	}
+	
+	function render() {  
+		mainLoop();  
+		requestAnimationFrame(render);  
+	}  
+	
+	function startGameTimer()
+	{
+		function timer()
+		{
+			var loopUse = mainLoop();
+			var refreshInterval = FRAME_UPDATE_INTERVALE - loopUse;
+			if(refreshInterval < 0)
+				refreshInterval = 0;
+			gameTimer = window.setTimeout(timer, refreshInterval); 	
+		}
+		
+		window.setTimeout(timer, FRAME_UPDATE_INTERVALE);
+	}
+	
+	function startFPSCounter()
+	{
+		var time = 0;
+		function instance()
+		{
+			if(gameRunning)
+			{
+				time += 1000;
+				var loopUse = fps(time);
+				
+				//var diff = (new Date().getTime() - start) - time;
+				fpsTimer = window.setTimeout(instance, (1000 - loopUse));
+			}
+			else
+				window.setTimeout(instance, 1000);
+		}
+		window.setTimeout(instance, 1000);
+	}
+	
+	function setCanvasStyleSize()
+	{
+		var	styleW = window.innerWidth + 'px';
+		var	styleH = window.innerHeight + 'px';
+		x_s = BK_W / window.innerWidth;
+		y_s = BK_H / window.innerHeight;
+		
+		var canvasList = document.body.getElementsByTagName('canvas');
+		for(var i=canvasList.length-1; i>=0; i--)
+		{
+			var item = canvasList[i];
+			item.style.width = styleW;
+			item.style.height = styleH;
+		}
+	}
+	
+	function drawPoint(ctx, para, col, row, color)
+	{
+		ctx.save();
+		ctx.beginPath();
+		ctx.strokeStyle = 'red';
+		ctx.fillStyle = color;
+		ctx.lineWidth = 3;
+		var x0 = col * para.mapGridW;
+		var y0 = row * para.mapGridH;
+		ctx.rect(x0, y0, para.mapGridW, para.mapGridH);
+		
+		ctx.stroke();
+		ctx.fill();
+		ctx.closePath();
+		ctx.restore();
+	}
+	
+	function findPath(para)
+	{
+		var astar = new AStar();
+		var bkCtx = background.getContext('2d'); 
+
+		grids = [];
+		for(var i=0; i<para.mapRows; i++)
+		{
+			var gridRow = [];
+			for(var j=0; j<para.mapCols; j++)
+			{
+				gridRow.push(para.astarData[i*para.mapRows + j]);
+				if(para.astarData[i*para.mapRows + j] == AS_START)
+					drawPoint(bkCtx, para, j, i, 'yellow');
+				if(para.astarData[i*para.mapRows + j] == AS_END)
+					drawPoint(bkCtx, para, j, i, 'blue');
+			}
+			grids.push(gridRow);
+		}
+		
+		astar.init(para.mapCols, para.mapRows, grids);
+		//astar.startRow = 1;
+		//astar.startCol = 0;
+		//astar.endRow = 3;
+		//astar.endCol = 0;
+		
+		
+		var result = astar.startFind();
+		if(result == 0)
+			alert('No path');
+		else if(result == -1)
+			alert('Error');
+		else if(result == 1)
+		{
+			alert('Find path');
+			//var path = astar.getPath();
+			//alert(path.length);
+			showAStarPath(bkCtx, astar.getPath(), para);
+		}
+	}
+	
+	function showAStarPath(ctx, path, para) //Show path from parent pointer
+	{
+		ctx.save();
+		ctx.beginPath();
+		ctx.strokeStyle = 'red';
+		ctx.lineWidth = 3;
+
+		var node = path[0];
+		for(var i=1; i<path.length; i++)
+		{
+			var nextNode = path[i];
+			
+			//Draw line between start and end region
+			var x0 =  node.col * para.mapGridW + para.mapGridW / 2;
+			var y0 =  node.row * para.mapGridH + para.mapGridH / 2;
+			var x1 =  nextNode.col * para.mapGridW + para.mapGridW / 2;
+			var y1 =  nextNode.row * para.mapGridH + para.mapGridH / 2;
+			ctx.moveTo(x0, y0);
+			ctx.lineTo(x1, y1);
+		
+			node = nextNode;
+		}
+		
+		ctx.stroke();
+		ctx.fill();
+		ctx.closePath();
+		ctx.restore();
+	}
+	
+	function drawMap(ctx, para)
+	{
+		var imgObj = imageList[para.imgIndex].obj;
+		
+		for(var r=0; r<para.mapRows; r++)
+		{
+			for(var c=0; c<para.mapCols; c++)
+			{
+				var index = r * para.mapRows + c;
+				var pos = para.data[index];
+				if(pos <= 0) //empty
+					continue;
+				
+				pos -= 1;		
+				var ox = (pos % para.imgRows) * para.gridW;
+				var oy = parseInt(pos / para.imgRows) * para.gridH;
+				
+				var dx = c * para.mapGridW;
+				var dy = r * para.mapGridH;
+				ctx.drawImage(imgObj, ox, oy, para.gridW, para.gridH, dx, dy, para.mapGridW, para.mapGridH);
+			}
+		}
+	
+	}
+	
+	function gameStart()
+	{
+		preRender();
+		
+		if(raf)
+			render();
+		else
+			startGameTimer();
+
+		startFPSCounter();
+		gameRunning = 1;
+		
+		showCoverDialog();
+		
+		playSound(soundList[3].obj, 1, 0.8);
+	}
+	
+	function showCoverDialog() //Help dialog
+	{
+		var canvasWindow = new CanvasWindow();
+		canvasWindow.initial(0, 0, BK_W, BK_H);
+		
+		canvasWindow.setBkImg(imageList[30].obj, 0, 0, BK_W, BK_H);
+		//canvasWindow.setBkGrid(10, 10, 60, 60, 5, 5, 3, 'red');
+		
+		//Hexagon map text
+		drawHexagonTest(canvasWindow.getCtx(), 'red', 3);
+		
+		var x1 = BK_W - 100;
+		var y1 = BK_H - 100;
+		
+		var closeBtn = new CanvasButton(imageList[1].obj, x1, y1, 80, 60, "Close", 12, 'Arial');
+		closeBtn.processMouseUp = function(){
+			if(this.down == 0)
+				return;
+				
+			this.down = 0;
+			this.parentWindow.close();
+			findPath(mapPara);
+		};
+		canvasWindow.addCtrl(closeBtn);
+		
+		var animateButton = new AnimateCanvasButton(canvasWindow.getCtx(), animateList[0], 10, y1 - 120*4, 120, 120, '', 12, 'Arial');
+		canvasWindow.addCtrl(animateButton);
+		var animateButton1 = new AnimateCanvasButton(canvasWindow.getCtx(), animateList[1], 10, y1 - 120*3, 120, 120, '', 12, 'Arial');
+		canvasWindow.addCtrl(animateButton1);
+		var animateButton2 = new AnimateCanvasButton(canvasWindow.getCtx(), animateList[2], 10, y1 - 120*2, 120, 120, '', 12, 'Arial');
+		canvasWindow.addCtrl(animateButton2);
+		var animateButton3 = new AnimateCanvasButton(canvasWindow.getCtx(), animateList[3], 10, y1 - 120, 120, 120, '', 12, 'Arial');
+		canvasWindow.addCtrl(animateButton3);
+		
+		var animateButton5 = new AnimateCanvasButton(canvasWindow.getCtx(), animateList[4], x1 - 100, y1 - 120, 120, 120, '', 12, 'Arial');
+		canvasWindow.addCtrl(animateButton5);
+		
+		var moveBtn = new CanvasButton(imageList[2].obj, x1 - 100, y1, 80, 60, "Move", 12, 'Arial');
+		var scaleFlag = false;
+		moveBtn.processMouseUp = function(){
+			if(this.down == 0)
+				return;
+				
+			this.down = 0;
+			//this.parentWindow.close();
+			var ox = animateButton.animatePlayer.x;
+			
+			if(ox > 100 ) //BK_W)
+			{
+				ox = 0;
+				var aw = animateButton.animatePlayer.w;
+				var ah = animateButton.animatePlayer.h;
+				if(scaleFlag == false)
+				{
+					scaleFlag = true;
+					animateButton.animatePlayer.setSize(2*aw, 2*ah);
+				}
+				else
+				{
+					scaleFlag = false;
+					animateButton.animatePlayer.setSize(aw / 2, ah / 2);
+				}
+			}
+			var oy = animateButton.animatePlayer.y;
+			animateButton.animatePlayer.setPos(ox + 20, oy);
+		};
+		canvasWindow.addCtrl(moveBtn);
+		canvasWindow.show();
+	}
+	
+	function loadSound()
+	{
+		var soundType = "mp3"; //For IE, Chrome and Safari      
+		if( (Sys.firefox) || (Sys.opera) || (Sys.chrome) )
+			soundType = "ogg";
+		
+		for (var index in soundList) {  
+			var soundObj = soundList[index];
+			soundObj.obj = new Audio(soundObj.path + "/" + soundObj.name + "." + soundType);
+		}
+	}
+	
+	function rowTest(row)
+	{
+		var rows = [];
+		if(row == 0)
+			rows.push(row, row + 1);
+		else if(row == BLOCK_ROW - 1)
+			rows.push(row - 1, row);
+		else if( (row > 0) && (row < BLOCK_ROW - 1))
+			rows.push(row - 1, row, row + 1);
+	}
+	
+	function audioTest()
+	{
+		var soundType = "mp3"; //For IE, Chrome and Safari      
+		if( (Sys.firefox) || (Sys.opera) || (Sys.chrome) )
+			soundType = "ogg";
+
+		var audio = new Audio("sounds/points." + soundType);
+
+		audio.addEventListener('ended', 
+								function () {
+									// Wait 500 milliseconds before next loop
+									setTimeout(function () { audio.currentTime = 0; audio.play(); }, 300);
+									//audio.currentTime = 0; audio.play();
+									}, 
+								false
+		);
+
+		audio.play();
+	}
+	
+	window.onresize = function() {
+		setCanvasStyleSize();
+	};
+	
+		
+	window.onload = function(){   
+				
+		rowTest(3);
+	
+		checkBrowserType();
+		
+		//audioTest();
+		loadSound();
+		
+		raf = requestAnimationFrameSupport();
+		
+		background = document.getElementById('background');
+		background.setAttribute("width",BK_W);
+		background.setAttribute("height",BK_H);
+		
+		//Scale canvas by auto scale style
+		setCanvasStyleSize();
+		
+		loadImages(gameStart);
+	}; 
+      
+</script>  
+</head>  
+  
+<body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
+	<canvas id="background" style="position:absolute">Your browser not support HTML5, please upgrade.</canvas>  
+ </body>   
+</html>  
