@@ -161,3 +161,26 @@ function findPos(obj) {
 	}
 	return {left:curleft,top:curtop};
 }
+
+exportTime = (function(){
+  if (typeof window !== 'undefined'){
+    // 浏览器
+    if (typeof window.performance !== 'undefined' && typeof performance.now !== 'undefined'){
+      // support hrt
+      return function(){
+        return performance.now();
+      };
+    }else{
+      // oh no..
+      return function(){
+        return (new Date()).getTime();
+      };
+    }
+  }else{
+    // node.js
+    return function(){
+      var diff = process.hrtime();
+      return (diff[0] * 1e9 + diff[1]) / 1e6; // nano second -> ms
+    };
+  }
+})();
