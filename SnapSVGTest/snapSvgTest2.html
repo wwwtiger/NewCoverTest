@@ -9,7 +9,8 @@
 		background-color: #000000;
 		-moz-user-select:   none; 
 	}
-</style>	
+</style>
+<script type="text/javascript" src="problems.js"></script>  	
 <script type="text/javascript" src="brainPuzzle.js"></script>  
 <script type="text/javascript" src="commonFuncs.js"></script>  
 <script src="../SnapSVG/dist/snap.svg.js"></script>
@@ -412,14 +413,31 @@
 		}
 		resultArray[0].useFlag = true; //Not use 'A'
 		
-		findOneSolution();
-		console.log(solutionStack);
-		alert('Find first solution without A');
+		if(findOneSolution())
+		{
+			alert('Find first solution without A');
+		}
+		else
+		{
+			alert('Can not find first solution without A');
+		}
 		
 		//Show solution
 		drawSolution();
+		
+		console.log(solutionStack);
 	}
 
+	function loadProblem(problem)
+	{
+		for(var i=0; i<problem.length; i++)
+		{
+			solutionStack.push(problem[i]);
+			resultArray[problem[i].blockIndex].useFlag = true;
+		}
+		
+	}
+	
 	function findSpecificSolution()
 	{
 		//Search one solution
@@ -430,25 +448,21 @@
 		}
 		resultArray[0].useFlag = true; //Not use 'A'
 		
-		//Specific solution with C, F, H
-		//solutionStack.push({blockIndex: 2, blockName: 'C', resultIndex: 0, 
-		//					pos:[{col:0, row:4},{col:1, row:4},{col:2, row:4} ,{col:3, row:4},{col:3, row:3}  ]});
-		//resultArray[2].useFlag = true; 
+		loadProblem(problem_219);
 		
-		//solutionStack.push({blockIndex: 5, blockName: 'F', resultIndex: 0, 
-		//					pos:[{col:1, row:5},{col:2, row:5},{col:2, row:6}]});
-		//resultArray[5].useFlag = true; 
-		
-		solutionStack.push({blockIndex: 7, blockName: 'H', resultIndex: 0, 
-							pos:[{col:1, row:3},{col:2, row:3},{col:2, row:2} ,{col:3, row:2},{col:3, row:1}  ]});
-		resultArray[7].useFlag = true; 
-		
-		findOneSolution();
-		console.log(solutionStack);
-		alert('Find specific solution');
+		if(findOneSolution())
+		{
+			alert('Find specific solution without A');
+		}
+		else
+		{
+			alert('Can not find specific solution without A');
+		}
 		
 		//Show solution
 		drawSolution();
+		
+		console.log(solutionStack);
 	}
 
 </script>  
