@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	* { margin: 0; padding: 0; }
+	html, body { height: 100%; width: 100%; }
+	
+	body
+	{
+		background-color: #000000;
+		-moz-user-select:   none; 
+	}
+</style>	
+<script type="text/javascript" src="brainPuzzle.js"></script>  
+<script type="text/javascript" src="commonFuncs.js"></script>  
+<script src="../SnapSVG/dist/snap.svg.js"></script>
+<script type="text/javascript" > 
+	var bkSvg;
+	var frontSvg;
+	
+	function drawSingleGroup(group, angle)
+	{
+		var ptLen = group.points.length;
+		var svgGroup = frontSvg.group();
+		svgGroup.attr({
+				id: group.name,
+				});
+		
+		var org = group.points[0];
+		for(var j = 0; j<ptLen; j++)
+		{
+			var pt = group.points[j];
+			var rpt = rotateByPoint(pt.x, pt.y, org.x, org.y, angle);
+			var rect = frontSvg.rect(rpt.x*GRID_SIZE , rpt.y*GRID_SIZE , BLOCK_SIZE, BLOCK_SIZE);
+			
+			// By default its black, lets change its attributes
+			rect.attr({
+				fill: group.color,
+				stroke: "blue",
+				strokeWidth: 2
+			});
+			
+			svgGroup.add(rect);
+		}
+		
+		return svgGroup;
+	}
+	
+	
+	function drawGroups()
+	{
+		var len = brainPuzzleBlocks.length;
+		for(var i=0; i<len; i++)
+		{	
+			var temp = i % 3;
+			var row = (i - temp) / 3;
+			var offsetX = 500 + 200 * temp;
+			var offsetY = 80 + 150 * row;
+			
+			//alert(brainPuzzleBlocks[i].name);
+			var group = brainPuzzleBlocks[i];
+			var ptLen = group.points.length;
+			
+			var svgGroup = frontSvg.group();
+			svgGroup.attr({
+					id: group.name,
+					});
+					
+			for(var j = 0; j<ptLen; j++)
+			{
+				var pt = group.points[j];
+				var rect = frontSvg.rect(pt.x*GRID_SIZE , pt.y*GRID_SIZE , BLOCK_SIZE, BLOCK_SIZE);
+				
+				// By default its black, lets change its attributes
+				rect.attr({
+					fill: group.color,
+					stroke: "blue",
+					strokeWidth: 2
+				});
+				
+				svgGroup.add(rect);
+				svgGroup.attr({
+						transform: 'T' + [offsetX, offsetY]
+					});
+			}
+				
+				
+			var move = function(dx,dy) {
+			this.attr({
+						transform: this.data('origTransform') + (this.data('origTransform') ? "T" : "t") + [dx, dy]
+					});
+}
+
+			var start = function() {
+					this.data('origTransform', this.transform().local );
+			}
+			var stop = function() {
+					console.log('finished dragging');
+			}
+
+				
+				
+				
+			svgGroup.drag(move, start, stop); 
+			//svgGroup.drag();
+			//svgGroup.dblclick(onDbClickBlock);
+		}
+		//Snap("#L").remove();
+	}
+	
+	function onDragStart(posx, posy) {
+ 
+	}
+
+	var currentElement = null;
+	
+	function onDragMove(dx, dy, posx, posy) {
+		this.attr({
+                    transform: this.data('origTransform') + (this.data('origTransform') ? "T" : "t") + [dx, dy]
+                });
+		
+		var topElement = Snap.getElementByPoint(posx, posy);
+		if(topElement == currentElement)
+			return;
+		
+		
+				
+		if(topElement != null)
+		{
+			topElement.attr({strokeWidth: 5});	
+			if(currentElement != null)
+				currentElement.attr({strokeWidth: 2});
+		}	
+		
+		currentElement = topElement;
+/*		
+	
+		var col = Math.cell(posx / GRID_SIZE);
+		var row = Math.cell(posy / GRID_SIZE);
+		var idStr = "BkGrid_" + col + "_" + row;
+		if(idStr == currentIdStr)
+			return;
+		else
+		{
+			if(currentIdStr != null)
+			{
+				SelectRect(currentIdStr, false);
+			}
+			
+			SelectRect(idStr, true);
+			currentIdStr = idStr;
+		}*/
+	}
+
+
+	function onDragEnd(event)
+	{
+		alert(event.x + "," + event.y);
+	}
+	
+	var PI = 3.1415;
+	var bkGrids;
+	var resultArray = [];
+	var angles = [0, PI / 2, PI, PI / 2 * 3];
+	
+	//测试每个块的有效放置位置，分四个方向
+	function testGroupOnGrid(index)
+	{	
+		var validCount = 0;
+		var validResult = {blockName:brainPuzzleBlocks[index].name, useFlag: false, result:[]}; //名称，是否在解决方法中使用，[{角度，位置}]
+		
+		for(var j=0; j<angles.length; j++)
+		{
+			if((brainPuzzleBlocks[index].name == "J") && ((j == 1) || (j == 3))) //J为对称几何体
+				continue;
+				
+			var angle = angles[j];
+			var svgGroup1 = drawSingleGroup(brainPuzzleBlocks[index], angle);			
+			for(var testCol = 0; testCol<10; testCol++)
+			{
+				for(var testRow = 0; testRow<10; testRow++)
+				{
+					//svgGroup1.attr({
+					//		transform: svgGroup1.data('origTransform') + (svgGroup1.data('origTransform') ? "T" : "t") +  [testCol*GRID_SIZE, testRow*GRID_SIZE]
+					//	});
+						
+					svgGroup1.attr({
+									transform: 'T' + [testCol*GRID_SIZE, testRow*GRID_SIZE]
+								});
+					
+					var ret = testBlock(brainPuzzleBlocks[index], angle, bkGrids, testCol, testRow);
+					if(ret.r == true)
+					{
+						//if(brainPuzzleBlocks[index].name == "D")
+						{
+							var tempGrids = initBrainPuzzleGrids();
+							//console.log(tempGrids);
+							if(hasSinglePoint(tempGrids, ret.o))
+							{
+								//alert("Valid but impossible");
+							}
+							else
+							{
+								validCount++;
+								validResult.result.push( {angle:angle, pos:ret.o} );
+								//alert("Valid and possible");
+							}
+						}
+					}
+					//else
+						//alert("Invalid");
+				}
+			}
+			//setTimeout(null, 1000);
+			svgGroup1.remove();
+		}
+		
+		//Record possible result array
+		resultArray.push(validResult);
+		console.log(validResult);
+		//console.log(index + ' at ' + angle + ' has ' + validCount + ' results');
+	}
+	
+	//function printResult()
+	//{
+	//	for(var i=0; i<resultArray.length; i++)
+	//	{
+	//		console.log(resultArray[i].i + ";" + resultArray[i].a);
+	//		for(var j=0; j<resultArray[i].result.length; j++)
+	//		{
+	//			var data = resultArray[i].result[j];
+	//			
+	//		}
+	//	}
+	//}
+	
+	var solution = [];
+	//function initSolution()
+	//{
+	//	//Ignore "A" first
+	//	for(var i=1; i<brainPuzzleBlocks.length; i++)
+	//	{
+	//		var s = {name:brainPuzzleBlocks[i].name, index: 0, pos:null};
+	//		solution.push(s);
+	//	}
+	//	
+	//	console.log(solution);
+	//}
+	
+	function pointsInUseFlag(usedPoints, newPoints)
+	{
+		for(var i=0; i<usedPoints.length; i++)
+		{
+			for(var j=0; j<newPoints.length; j++)
+			{
+				if((usedPoints[i].col == newPoints[j].col) && (usedPoints[i].row == newPoints[j].row))
+					return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	var solutionStack = [];
+	function findOneSolution()
+	{
+		var findFlag = false;	
+		if(solutionStack.length >= 11) //Find one!
+		{
+			//console.log(solutionStack);
+			//alert('findOneSolution');
+			return true;
+		}
+		
+		//Set current block index
+		var blockIndex = -1;
+		for(var j=0; j<resultArray.length; j++)
+		{		
+			if(resultArray[j].useFlag == false)
+			{
+				blockIndex = j;
+				break;
+			}
+		}
+		
+		if(blockIndex < 0)
+			return false;
+			
+		var name = 	resultArray[blockIndex].blockName;
+		var result = resultArray[blockIndex].result;
+		//var name = 	resultArray[solutionStack.length + 1].blockName;
+		//var result = resultArray[solutionStack.length + 1].result;
+		//console.log(result);
+		
+		for(var j=0; j<result.length; j++)
+		{
+			var inUseFlag = false;
+			for(var k=0; k<solutionStack.length; k++)
+			{
+				if(pointsInUseFlag(solutionStack[k].pos, result[j].pos))
+				{
+					inUseFlag = true;
+					break;
+				}
+			}
+			
+			if(inUseFlag)
+				continue;
+			else
+			{
+				findFlag = true;
+				solutionStack.push({blockIndex: blockIndex, blockName: name, resultIndex: j, pos:result[j].pos});
+				resultArray[blockIndex].useFlag = true;
+				if(findOneSolution() == false)
+				{
+					findFlag = false;
+					solutionStack.pop();
+					resultArray[blockIndex].useFlag = false;
+				}
+				else
+					break;
+			}
+		}
+		
+		return findFlag;
+	}
+	
+	
+	window.onload = function() 
+	{
+		bkGrids = initBrainPuzzleGrids()
+		//initSolution();
+		
+		// First lets create our drawing surface out of existing SVG element
+		// If you want to create new surface just provide dimensions
+		// like s = Snap(800, 600);
+		bkSvg = Snap("#svgFront");
+		frontSvg = Snap("#svgFront");
+		
+		//Draw backgroup rects
+		for(var i=0; i<10; i++)
+		{
+			for(var j=0; j<10; j++)
+			{
+				//// Lets create big circle in the middle:
+				var rect = bkSvg.rect(i*GRID_SIZE, j*GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+				
+				var fillColor = "grey";
+				if(bkGrids[i][j] == VALID)
+					fillColor = "ivory";
+					
+				// By default its black, lets change its attributes
+				rect.attr({
+					id: "BkGrid_" + i + "_" + j,
+					fill: fillColor,
+					stroke: "black",
+					strokeWidth: 1
+				});
+				
+				var hoverIn = function() {
+						this.attr({stroke: "red", strokeWidth: 2});
+				}
+				var hoverOut = function() {
+						this.attr({stroke: "black", strokeWidth: 1});
+				}
+				rect.hover(hoverIn, hoverOut);
+			}
+		}
+		
+		drawGroups();
+	}
+	
+	function drawSolution()
+	{
+		for(var i=0; i<solutionStack.length; i++)
+		{
+			for(var j=0; j<solutionStack[i].pos.length; j++)
+			{
+				var pos = solutionStack[i].pos[j];
+				var id = "#BkGrid_" + pos.col + "_" + pos.row;
+				var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+				var rect = Snap(id);
+				rect.attr({
+					fill: color,});
+			}
+		}
+	}
+	
+	function startAStar()	
+	{	
+		console.log('Start...');
+		
+		//Get all possible position
+		for(var i=0; i<brainPuzzleBlocks.length; i++)
+		{
+			testGroupOnGrid(i);
+		}
+		
+		
+		console.log(resultArray);
+		console.log('Find all positions ');
+		
+		findSpecificSolution();
+	}	
+	
+	function findFirstSolutionWithoutA()
+	{
+		//Search one solution
+		solutionStack = [];
+		for(var i=0; i<resultArray.length; i++)
+		{
+			resultArray[i].useFlag = false;
+		}
+		resultArray[0].useFlag = true; //Not use 'A'
+		
+		findOneSolution();
+		console.log(solutionStack);
+		alert('Find first solution without A');
+		
+		//Show solution
+		drawSolution();
+	}
+
+	function findSpecificSolution()
+	{
+		//Search one solution
+		solutionStack = [];
+		for(var i=0; i<resultArray.length; i++)
+		{
+			resultArray[i].useFlag = false;
+		}
+		resultArray[0].useFlag = true; //Not use 'A'
+		
+		//Specific solution with C, F, H
+		//solutionStack.push({blockIndex: 2, blockName: 'C', resultIndex: 0, 
+		//					pos:[{col:0, row:4},{col:1, row:4},{col:2, row:4} ,{col:3, row:4},{col:3, row:3}  ]});
+		//resultArray[2].useFlag = true; 
+		
+		//solutionStack.push({blockIndex: 5, blockName: 'F', resultIndex: 0, 
+		//					pos:[{col:1, row:5},{col:2, row:5},{col:2, row:6}]});
+		//resultArray[5].useFlag = true; 
+		
+		solutionStack.push({blockIndex: 7, blockName: 'H', resultIndex: 0, 
+							pos:[{col:1, row:3},{col:2, row:3},{col:2, row:2} ,{col:3, row:2},{col:3, row:1}  ]});
+		resultArray[7].useFlag = true; 
+		
+		findOneSolution();
+		console.log(solutionStack);
+		alert('Find specific solution');
+		
+		//Show solution
+		drawSolution();
+	}
+
+</script>  
+</head>  
+  
+<body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
+	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+	<svg id="svgFront" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+    <input type="button" onclick="startAStar()" style="position:absolute;left:200px;top:400px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start find">
+</body>   
+</html>  

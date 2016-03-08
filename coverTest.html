@@ -23,7 +23,7 @@
 <script type="text/javascript" src="js/canvasGui.js"></script> 
 <script type="text/javascript" src="js/hexagonMap.js"></script> 
 <script type="text/javascript" src="js/astarClass.js"></script> 
-
+<script type="text/javascript" src="brainPuzzle.js"></script> 
 <script type="text/javascript" > 
  
  
@@ -466,7 +466,13 @@
 	
 		
 	window.onload = function(){   
-				
+		var PI = 3.14159;
+		var newCoordinate = rotateByPoint(2, 0, 0, 0, -PI / 2);
+		alert(newCoordinate);
+		
+		
+		var bpGrids = initBrainPuzzleGrids();
+		
 		rowTest(3);
 	
 		checkBrowserType();

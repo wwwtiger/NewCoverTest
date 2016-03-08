@@ -167,11 +167,12 @@ exportTime = (function(){
     // 浏览器
     if (typeof window.performance !== 'undefined' && typeof performance.now !== 'undefined'){
       // support hrt
+	  //console.log("support hrt");
       return function(){
         return performance.now();
       };
     }else{
-      // oh no..
+      //console.log("Not support hrt");
       return function(){
         return (new Date()).getTime();
       };
