@@ -1,3 +1,6 @@
+//从复杂到简单的放置顺序
+var piorityIndex = [6, 7, 8, 3, 4, 1, 2, 0, 9, 10, 11, 5];
+
 var brainPuzzleBlocks = [
 				{name:'A', color:'#FF7F00', 
 				points:[{ x:0, y:0, }, 
@@ -225,13 +228,43 @@ function hasSinglePoint(tempGrids, pos)
 		var row = Valid_Points[i].row;
 		if(tempGrids[col][row] == VALID)
 		{
-			if(((row<(10-1)) && (tempGrids[col][row+1] == VALID)) || 
-				((col<(10-1)) && (tempGrids[col+1][row] == VALID) ) || 
-				((row>1) &&  (tempGrids[col][row-1] == VALID)) ||
-				((col>1) && (tempGrids[col-1][row] == VALID) ) )
-					continue;
-			else		
+			var neighbourCount = 0;
+			var nCol, nRow;
+			if((row<(10-1)) && (tempGrids[col][row+1] == VALID)) 
+			{
+				neighbourCount++;
+				nCol = col; nRow = row+1;
+			}
+			if((col<(10-1)) && (tempGrids[col+1][row] == VALID))
+			{
+				neighbourCount++;
+				nCol = col+1; nRow = row;
+			}
+			if((row>0) &&  (tempGrids[col][row-1] == VALID)) 
+			{
+				neighbourCount++;
+				nCol = col; nRow = row-1;
+			}
+			if((col>0) && (tempGrids[col-1][row] == VALID)) 
+			{
+				neighbourCount++;
+				nCol = col-1; nRow = row;
+			}
+			
+			if(neighbourCount == 0)
 				return true;
+			else if(neighbourCount == 1)	//Check only two block region
+			{
+				tempGrids[col][row] = INVALID;
+				col = nCol; row = nRow;
+				if(((row<(10-1)) && (tempGrids[col][row+1] == VALID)) || 
+					((col<(10-1)) && (tempGrids[col+1][row] == VALID)) ||
+					((row>0) &&  (tempGrids[col][row-1] == VALID))  ||
+					((col>0) && (tempGrids[col-1][row] == VALID)) )
+					continue;
+				else
+					return true;
+			}
 		}
 	}
 	return false;

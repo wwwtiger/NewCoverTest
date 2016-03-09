@@ -171,7 +171,7 @@
 		
 		for(var j=0; j<angles.length; j++)
 		{
-			if((brainPuzzleBlocks[index].name == "J") && ((j == 1) || (j == 3))) //J为对称几何体
+			if((brainPuzzleBlocks[index].name == "J") && ((j == 2) || (j == 3))) //J为对称几何体
 				continue;
 				
 			var angle = angles[j];
@@ -191,20 +191,19 @@
 					var ret = testBlock(brainPuzzleBlocks[index], angle, bkGrids, testCol, testRow);
 					if(ret.r == true)
 					{
-						//if(brainPuzzleBlocks[index].name == "D")
+						var tempGrids = initBrainPuzzleGrids();
+						//console.log(tempGrids);
+						if(hasSinglePoint(tempGrids, ret.o))
 						{
-							var tempGrids = initBrainPuzzleGrids();
-							//console.log(tempGrids);
-							if(hasSinglePoint(tempGrids, ret.o))
-							{
-								//alert("Valid but impossible");
-							}
-							else
-							{
-								validCount++;
-								validResult.result.push( {angle:angle, pos:ret.o} );
-								//alert("Valid and possible");
-							}
+							//if(brainPuzzleBlocks[index].name == "I")
+							//	alert("Valid but impossible");
+						}
+						else
+						{
+							validCount++;
+							validResult.result.push( {angle:angle, pos:ret.o} );
+							//if(brainPuzzleBlocks[index].name == "I")
+							//alert("Valid and possible");
 						}
 					}
 					//else
@@ -274,11 +273,11 @@
 		
 		//Set current block index
 		var blockIndex = -1;
-		for(var j=0; j<resultArray.length; j++)
+		for(var i=0; i<piorityIndex.length; i++)
 		{		
-			if(resultArray[j].useFlag == false)
+			if(resultArray[piorityIndex[i]].useFlag == false)
 			{
-				blockIndex = j;
+				blockIndex = piorityIndex[i];
 				break;
 			}
 		}
@@ -288,43 +287,54 @@
 			
 		var name = 	resultArray[blockIndex].blockName;
 		var result = resultArray[blockIndex].result;
-		//var name = 	resultArray[solutionStack.length + 1].blockName;
-		//var result = resultArray[solutionStack.length + 1].result;
-		//console.log(result);
+		
+		//Get all occupied points
+		var allPoints = [];
+		for(var k=0; k<solutionStack.length; k++)
+		{
+			allPoints = allPoints.concat(solutionStack[k].pos);
+		}
 		
 		for(var j=0; j<result.length; j++)
 		{
-			var inUseFlag = false;
-			for(var k=0; k<solutionStack.length; k++)
-			{
-				if(pointsInUseFlag(solutionStack[k].pos, result[j].pos))
-				{
-					inUseFlag = true;
-					break;
-				}
-			}
-			
-			if(inUseFlag)
+			//Point already used
+			if(pointsInUseFlag(allPoints, result[j].pos))
 				continue;
-			else
+			
+			//Single point exist
+			var tempGrids = initBrainPuzzleGrids();
+			if(hasSinglePoint(tempGrids, result[j].pos.concat(allPoints)))
+				continue;
+			
+			//Possible position, push and recurse
+			findFlag = true;
+			solutionStack.push({blockIndex: blockIndex, blockName: name, resultIndex: j, pos:result[j].pos});
+			
+			drawBlock(result[j].pos, brainPuzzleBlocks[blockIndex].color);
+			alert("Push " + blockIndex);
+			
+			resultArray[blockIndex].useFlag = true;
+			if(findOneSolution() == false) //递归失败，回退
 			{
-				findFlag = true;
-				solutionStack.push({blockIndex: blockIndex, blockName: name, resultIndex: j, pos:result[j].pos});
-				resultArray[blockIndex].useFlag = true;
-				if(findOneSolution() == false)
-				{
-					findFlag = false;
-					solutionStack.pop();
-					resultArray[blockIndex].useFlag = false;
-				}
-				else
-					break;
+				findFlag = false;
+				solutionStack.pop();
+				
+				drawBlock(result[j].pos, VALID_BK_COLOR);
+				alert("Pop " + blockIndex);
+				
+				resultArray[blockIndex].useFlag = false;
 			}
+			else
+				break; //Find solution
 		}
 		
-		return findFlag;
+		return findFlag; //Success or failed
 	}
 	
+	var INVALID_BK_COLOR = "black";
+	var VALID_BK_COLOR = "grey";
+	var HOVER_IN_BK_STROKE = "red";
+	var HOVER_OUT_BK_STROKE = "black";
 	
 	window.onload = function() 
 	{
@@ -345,23 +355,23 @@
 				//// Lets create big circle in the middle:
 				var rect = bkSvg.rect(i*GRID_SIZE, j*GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
 				
-				var fillColor = "grey";
+				var fillColor = INVALID_BK_COLOR;
 				if(bkGrids[i][j] == VALID)
-					fillColor = "ivory";
+					fillColor = VALID_BK_COLOR;
 					
 				// By default its black, lets change its attributes
 				rect.attr({
 					id: "BkGrid_" + i + "_" + j,
 					fill: fillColor,
-					stroke: "black",
+					stroke: HOVER_OUT_BK_STROKE,
 					strokeWidth: 1
 				});
 				
 				var hoverIn = function() {
-						this.attr({stroke: "red", strokeWidth: 2});
+						this.attr({stroke: HOVER_IN_BK_STROKE, strokeWidth: 2});
 				}
 				var hoverOut = function() {
-						this.attr({stroke: "black", strokeWidth: 1});
+						this.attr({stroke: HOVER_OUT_BK_STROKE, strokeWidth: 1});
 				}
 				rect.hover(hoverIn, hoverOut);
 			}
@@ -370,23 +380,29 @@
 		drawGroups();
 	}
 	
+	function drawBlock(posArray, color) 
+	{
+		for(var j=0; j<posArray.length; j++)
+		{
+			var pos = posArray[j];
+			var id = "#BkGrid_" + pos.col + "_" + pos.row;
+			//var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			var rect = Snap(id);
+			rect.attr({
+				fill: color,});
+		}
+	}
+	
 	function drawSolution()
 	{
 		for(var i=0; i<solutionStack.length; i++)
 		{
-			for(var j=0; j<solutionStack[i].pos.length; j++)
-			{
-				var pos = solutionStack[i].pos[j];
-				var id = "#BkGrid_" + pos.col + "_" + pos.row;
-				var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
-				var rect = Snap(id);
-				rect.attr({
-					fill: color,});
-			}
+			var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			drawBlock(solutionStack[i].pos, color);
 		}
 	}
 	
-	function startAStar()	
+	function gameStart()	
 	{	
 		console.log('Start...');
 		
@@ -401,6 +417,7 @@
 		console.log('Find all positions ');
 		
 		findSpecificSolution();
+		//findFirstSolutionWithoutA();
 	}	
 	
 	function findFirstSolutionWithoutA()
@@ -434,6 +451,9 @@
 		{
 			solutionStack.push(problem[i]);
 			resultArray[problem[i].blockIndex].useFlag = true;
+			
+			drawBlock(problem[i].pos, brainPuzzleBlocks[problem[i].blockIndex].color);
+			alert("Problem push " + problem[i].blockIndex);
 		}
 		
 	}
@@ -471,6 +491,6 @@
 <body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
 	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
 	<svg id="svgFront" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
-    <input type="button" onclick="startAStar()" style="position:absolute;left:200px;top:400px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start find">
+    <input type="button" onclick="gameStart()" style="position:absolute;left:200px;top:400px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start find">
 </body>   
 </html>  
