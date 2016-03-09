@@ -109,7 +109,7 @@ sin cos  -sin*cx-cos*cy+cy
 
 */
 //²âÊÔ·ÅÖÃÊÇ·ñºÏ·¨£¬Èç¹ûºÏ·¨£¬·µ»Ø·ÅÖÃÎ»ÖÃµãµÄÁĞ±í
-function testBlock(block, angle, grids, col, row) //²âÊÔ½«·½¿éĞı×ªangleºó£¬·ÅÖÃÔÚgridµÄCOL,ROW´¦ÊÇ·ñºÏ·¨
+function testBlock(block, angle, mirrorX, grids, col, row) //²âÊÔ½«·½¿éĞı×ªangleºó£¬·ÅÖÃÔÚgridµÄCOL,ROW´¦ÊÇ·ñºÏ·¨
 {
 	var ret = {r:false, o:[]};
 	
@@ -129,7 +129,9 @@ function testBlock(block, angle, grids, col, row) //²âÊÔ½«·½¿éĞı×ªangleºó£¬·ÅÖÃÔ
 	
 	for(var i=1; i<count; i++)
 	{
-		var pt = block.points[i];
+		var pt = {x: block.points[i].x, y:block.points[i].y};
+		if(mirrorX)
+			pt.y = -pt.y;
 		//console.log('Point ' + i + ' at col:' + pt.x + ', row:' + pt.y);
 		var offset = rotateByPoint(pt.x, pt.y, org.x, org.y, angle);
 		//console.log('Offset point ' + i + ' at col:' + offset.x + ', row:' + offset.y);

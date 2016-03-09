@@ -18,7 +18,7 @@
 	var bkSvg;
 	var frontSvg;
 	
-	function drawSingleGroup(group, angle)
+	function drawSingleGroup(group, angle, mirrorX)
 	{
 		var ptLen = group.points.length;
 		var svgGroup = frontSvg.group();
@@ -29,7 +29,11 @@
 		var org = group.points[0];
 		for(var j = 0; j<ptLen; j++)
 		{
-			var pt = group.points[j];
+			var pt = {x: group.points[j].x, y:group.points[j].y};
+			
+			if(mirrorX == 1)
+				pt.y = -pt.y;
+				
 			var rpt = rotateByPoint(pt.x, pt.y, org.x, org.y, angle);
 			var rect = frontSvg.rect(rpt.x*GRID_SIZE , rpt.y*GRID_SIZE , BLOCK_SIZE, BLOCK_SIZE);
 			
@@ -163,57 +167,59 @@
 	var resultArray = [];
 	var angles = [0, PI / 2, PI, PI / 2 * 3];
 	
-	//测试每个块的有效放置位置，分四个方向
+	//测试每个块的有效放置位置，分镜像两个，旋转四个方向
 	function testGroupOnGrid(index)
 	{	
 		var validCount = 0;
 		var validResult = {blockName:brainPuzzleBlocks[index].name, useFlag: false, result:[]}; //名称，是否在解决方法中使用，[{角度，位置}]
 		
-		for(var j=0; j<angles.length; j++)
+		for(var i=0; i<2; i++)
 		{
-			if((brainPuzzleBlocks[index].name == "J") && ((j == 2) || (j == 3))) //J为对称几何体
-				continue;
-				
-			var angle = angles[j];
-			var svgGroup1 = drawSingleGroup(brainPuzzleBlocks[index], angle);			
-			for(var testCol = 0; testCol<10; testCol++)
+			for(var j=0; j<angles.length; j++)
 			{
-				for(var testRow = 0; testRow<10; testRow++)
-				{
-					//svgGroup1.attr({
-					//		transform: svgGroup1.data('origTransform') + (svgGroup1.data('origTransform') ? "T" : "t") +  [testCol*GRID_SIZE, testRow*GRID_SIZE]
-					//	});
-						
-					svgGroup1.attr({
-									transform: 'T' + [testCol*GRID_SIZE, testRow*GRID_SIZE]
-								});
+				if((brainPuzzleBlocks[index].name == "J") && ((j == 2) || (j == 3))) //J为对称几何体
+					continue;
 					
-					var ret = testBlock(brainPuzzleBlocks[index], angle, bkGrids, testCol, testRow);
-					if(ret.r == true)
+				var angle = angles[j];
+				var svgGroup1 = drawSingleGroup(brainPuzzleBlocks[index], angle, i);			
+				for(var testCol = 0; testCol<10; testCol++)
+				{
+					for(var testRow = 0; testRow<10; testRow++)
 					{
-						var tempGrids = initBrainPuzzleGrids();
-						//console.log(tempGrids);
-						if(hasSinglePoint(tempGrids, ret.o))
+						//svgGroup1.attr({
+						//		transform: svgGroup1.data('origTransform') + (svgGroup1.data('origTransform') ? "T" : "t") +  [testCol*GRID_SIZE, testRow*GRID_SIZE]
+						//	});
+							
+						svgGroup1.attr({
+										transform: 'T' + [testCol*GRID_SIZE, testRow*GRID_SIZE]
+									});
+						
+						var ret = testBlock(brainPuzzleBlocks[index], angle, i, bkGrids, testCol, testRow);
+						if(ret.r == true)
 						{
-							//if(brainPuzzleBlocks[index].name == "I")
-							//	alert("Valid but impossible");
+							var tempGrids = initBrainPuzzleGrids();
+							//console.log(tempGrids);
+							if(hasSinglePoint(tempGrids, ret.o))
+							{
+								//if(brainPuzzleBlocks[index].name == "I")
+								//	alert("Valid but impossible");
+							}
+							else
+							{
+								validCount++;
+								validResult.result.push( {angle:angle, pos:ret.o} );
+								//if(brainPuzzleBlocks[index].name == "I")
+								//alert("Valid and possible");
+							}
 						}
-						else
-						{
-							validCount++;
-							validResult.result.push( {angle:angle, pos:ret.o} );
-							//if(brainPuzzleBlocks[index].name == "I")
-							//alert("Valid and possible");
-						}
+						//else
+							//alert("Invalid");
 					}
-					//else
-						//alert("Invalid");
 				}
+				//setTimeout(null, 1000);
+				svgGroup1.remove();
 			}
-			//setTimeout(null, 1000);
-			svgGroup1.remove();
 		}
-		
 		//Record possible result array
 		resultArray.push(validResult);
 		console.log(validResult);
@@ -297,13 +303,19 @@
 		
 		for(var j=0; j<result.length; j++)
 		{
+			//highlightBlock(result[j].pos, brainPuzzleBlocks[blockIndex].color, 5);
+			//alert("Test push " + blockIndex);
+			//highlightBlock(result[j].pos, HOVER_OUT_BK_STROKE, 1);
+			
 			//Point already used
 			if(pointsInUseFlag(allPoints, result[j].pos))
 				continue;
 			
 			//Single point exist
 			var tempGrids = initBrainPuzzleGrids();
-			if(hasSinglePoint(tempGrids, result[j].pos.concat(allPoints)))
+			var tempPoints = [];
+			tempPoints = tempPoints.concat(allPoints, result[j].pos);
+			if(hasSinglePoint(tempGrids, tempPoints))
 				continue;
 			
 			//Possible position, push and recurse
@@ -378,6 +390,20 @@
 		}
 		
 		drawGroups();
+	}
+	
+	function highlightBlock(posArray, color, width) 
+	{
+		for(var j=0; j<posArray.length; j++)
+		{
+			var pos = posArray[j];
+			var id = "#BkGrid_" + pos.col + "_" + pos.row;
+			//var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			var rect = Snap(id);
+			rect.attr({
+				stroke: color,
+				strokeWidth: width});
+		}
 	}
 	
 	function drawBlock(posArray, color) 
