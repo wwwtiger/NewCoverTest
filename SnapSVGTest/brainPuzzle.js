@@ -217,56 +217,64 @@ function initBrainPuzzleGrids()
 	return grids;
 }	
 
-function hasSinglePoint(tempGrids, pos)
+function getPointNeighbourCount(tempGrids, col, row)
 {
-	for(var i=0; i<pos.length; i++)
+	var neighbours = [];
+	
+	if((row<(10-1)) && (tempGrids[col][row+1] == VALID)) 
 	{
-		tempGrids[pos[i].col][pos[i].row] = INVALID;
+		neighbours.push({orient:0});
+	}
+	if((col<(10-1)) && (tempGrids[col+1][row] == VALID))
+	{
+		neighbours.push({orient:1});
+	}
+	if((row>0) &&  (tempGrids[col][row-1] == VALID)) 
+	{
+		neighbours.push({orient:2});
+	}
+	if((col>0) && (tempGrids[col-1][row] == VALID)) 
+	{
+		neighbours.push({orient:3});
+	}
+	
+	return neighbours;
+}
+
+function hasSinglePoint(tempGrids, deletePos)
+{
+	for(var i=0; i<deletePos.length; i++)
+	{
+		tempGrids[deletePos[i].col][deletePos[i].row] = INVALID;
 	}
 	
 	for(var i=0; i<Valid_Points.length; i++)
 	{
 		var col = Valid_Points[i].col;
 		var row = Valid_Points[i].row;
-		if(tempGrids[col][row] == VALID)
-		{
-			var neighbourCount = 0;
-			var nCol, nRow;
-			if((row<(10-1)) && (tempGrids[col][row+1] == VALID)) 
-			{
-				neighbourCount++;
-				nCol = col; nRow = row+1;
-			}
-			if((col<(10-1)) && (tempGrids[col+1][row] == VALID))
-			{
-				neighbourCount++;
-				nCol = col+1; nRow = row;
-			}
-			if((row>0) &&  (tempGrids[col][row-1] == VALID)) 
-			{
-				neighbourCount++;
-				nCol = col; nRow = row-1;
-			}
-			if((col>0) && (tempGrids[col-1][row] == VALID)) 
-			{
-				neighbourCount++;
-				nCol = col-1; nRow = row;
-			}
+		if(tempGrids[col][row] == INVALID)
+			continue;
 			
-			if(neighbourCount == 0)
+		var neighbours = getPointNeighbourCount(tempGrids, col, row);
+					
+		if(neighbours.length == 0)
+			return true;
+		else if(neighbours.length == 1)
+		{
+			var nCol = col;
+			var nRow = row;
+			if(neighbours[0].orient == 0)
+				nRow++;
+			else if(neighbours[0].orient == 1)
+				nCol++;
+			else if(neighbours[0].orient == 2)
+				nRow--;
+			else if(neighbours[0].orient == 3)
+				nCol--;
+				
+			var nCount = getPointNeighbourCount(tempGrids, nCol, nRow);
+			if(nCount.length <= 1)
 				return true;
-			else if(neighbourCount == 1)	//Check only two block region
-			{
-				tempGrids[col][row] = INVALID;
-				col = nCol; row = nRow;
-				if(((row<(10-1)) && (tempGrids[col][row+1] == VALID)) || 
-					((col<(10-1)) && (tempGrids[col+1][row] == VALID)) ||
-					((row>0) &&  (tempGrids[col][row-1] == VALID))  ||
-					((col>0) && (tempGrids[col-1][row] == VALID)) )
-					continue;
-				else
-					return true;
-			}
 		}
 	}
 	return false;

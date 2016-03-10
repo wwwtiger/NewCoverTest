@@ -175,6 +175,15 @@
 		
 		for(var i=0; i<2; i++)
 		{
+			if(((brainPuzzleBlocks[index].name == "F") || 
+				(brainPuzzleBlocks[index].name == "G") || 
+				(brainPuzzleBlocks[index].name == "H") || 
+				(brainPuzzleBlocks[index].name == "I") || 
+				(brainPuzzleBlocks[index].name == "J") || 
+				(brainPuzzleBlocks[index].name == "S") ) 
+				&& (i == 1)) //F G H I J S不需要镜像
+				continue;
+				
 			for(var j=0; j<angles.length; j++)
 			{
 				if((brainPuzzleBlocks[index].name == "J") && ((j == 2) || (j == 3))) //J为对称几何体
@@ -208,8 +217,8 @@
 							{
 								validCount++;
 								validResult.result.push( {angle:angle, pos:ret.o} );
-								//if(brainPuzzleBlocks[index].name == "I")
-								//alert("Valid and possible");
+								//if(brainPuzzleBlocks[index].name == "E")
+								//	alert("Valid and possible");
 							}
 						}
 						//else
@@ -303,9 +312,12 @@
 		
 		for(var j=0; j<result.length; j++)
 		{
-			//highlightBlock(result[j].pos, brainPuzzleBlocks[blockIndex].color, 5);
-			//alert("Test push " + blockIndex);
-			//highlightBlock(result[j].pos, HOVER_OUT_BK_STROKE, 1);
+			//if(brainPuzzleBlocks[blockIndex].name == "E")
+			//{
+			//	highlightBlock(result[j].pos, brainPuzzleBlocks[blockIndex].color, 5);
+			//	alert("Test push " + blockIndex);
+			//	highlightBlock(result[j].pos, HOVER_OUT_BK_STROKE, 1);
+			//}
 			
 			//Point already used
 			if(pointsInUseFlag(allPoints, result[j].pos))
@@ -494,7 +506,7 @@
 		}
 		resultArray[0].useFlag = true; //Not use 'A'
 		
-		loadProblem(problem_219);
+		loadProblem(problem_218);
 		
 		if(findOneSolution())
 		{
