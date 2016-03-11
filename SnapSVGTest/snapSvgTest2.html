@@ -108,7 +108,13 @@
 					this.data('origTransform', this.transform().local );
 			}
 			var stop = function() {
-					console.log('finished dragging');
+					
+					var id = this.attr("id");
+					console.log(id + ' finished dragging');
+					var block = document.getElementById(id);
+					var transMatrix = block.getCTM();
+					alert(transMatrix);
+					console.log(transMatrix);
 			}
 
 				
@@ -116,9 +122,102 @@
 				
 			svgGroup.drag(move, start, stop); 
 			//svgGroup.drag();
-			//svgGroup.dblclick(onDbClickBlock);
+			svgGroup.dblclick(onDbClickBlock);
 		}
 		//Snap("#L").remove();
+	}
+	
+	function matrixToStr(matrix)
+	{
+		var transformStr = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," 
+					+ matrix.d + "," + matrix.e + "," + matrix.f + ")";
+		return transformStr;
+	}
+
+	function mirrorByLine(elem, a, b, c) //line: ax + by + c = 0
+	{
+		var s = 1/(a*a + b*b);
+		
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = s*(b*b - a*a);
+		newMatrix.b = s*(0 - 2*a*b);
+		newMatrix.c = s*(0 - 2*a*c);
+		newMatrix.d = newMatrix.b;
+		newMatrix.e = s*(a*a - b*b);
+		newMatrix.f = s*(0 - 2*b*c);
+		
+		var resultMatrix = svgRoot.createSVGMatrix();
+		resultMatrix.a = newMatrix.a * transMatrix.a + newMatrix.b * transMatrix.d;
+		resultMatrix.b = newMatrix.a * transMatrix.b + newMatrix.b * transMatrix.e;
+		resultMatrix.c = newMatrix.a * transMatrix.c + newMatrix.b * transMatrix.f + newMatrix.c;
+		resultMatrix.d = newMatrix.d * transMatrix.a + newMatrix.e * transMatrix.d;
+		resultMatrix.e = newMatrix.d * transMatrix.b + newMatrix.e * transMatrix.e;
+		resultMatrix.f = newMatrix.d * transMatrix.c + newMatrix.e * transMatrix.f  + newMatrix.f;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(resultMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+	
+
+	function updateImage(elem, cx, cy, rotateFlag, rx, ry)
+	{
+		var sin, cos;
+		if(rotateFlag == 1) //90
+		{
+			sin = 1;
+			cos = 0;
+		}
+		else if(rotateFlag == 2) //180
+		{
+			sin = 0;
+			cos = -1;
+		}
+		else if(rotateFlag == 3) //270
+		{
+			sin = -1;
+			cos = 0;
+		}
+		else //default 0
+		{
+			sin = 0;
+			cos = 1;
+		}
+		
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = transMatrix.a * cos - transMatrix.b * sin;
+		newMatrix.b = transMatrix.a * sin + transMatrix.b * cos;
+		newMatrix.c = transMatrix.c * cos - transMatrix.d * sin;
+		newMatrix.d = transMatrix.c * sin + transMatrix.d * cos;
+		newMatrix.e = transMatrix.e * cos - transMatrix.f * sin - rx * cos + ry * sin + rx + cx ;
+		newMatrix.f = transMatrix.e * sin + transMatrix.f * cos - rx * sin - ry * cos + ry + cy ;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(newMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+	
+	function onDbClickBlock(evt)
+	{
+		var id = this.attr("id");
+		var block = document.getElementById(id);
+		
+		//Mirror by Y=evt.y, so a=0, b=1, c=-evt.y
+		mirrorByLine(block, 0, 1, -evt.y);
+		
+		//Move and rotate
+		//updateImage(block, 0, 0, 1, evt.x, evt.y);
+		
+		//var matrixStr = Snap.matrix(this);
+		//var m = Snap.parseTransformString(matrixStr);		
+		//alert(matrixStr);
+		//alert(this.transform(matrixStr));
 	}
 	
 	function onDragStart(posx, posy) {
@@ -168,7 +267,12 @@
 
 	function onDragEnd(event)
 	{
-		alert(event.x + "," + event.y);
+		//alert(event.x + "," + event.y);
+		var id = this.attr("id");
+		var block = document.getElementById(id);
+		var transMatrix = block.getCTM();
+		alert(transMatrix);
+
 	}
 	
 	
@@ -221,12 +325,15 @@
 		console.log(resultArray);
 		console.log('Find all positions ');
 		
-		//findSpecificSolution();
-		findFirstSolutionWithoutA();
+		findSpecificSolution();
+		//findFirstSolutionWithoutA();
 	}	
 
+	var svgRoot;
+	
 	window.onload = function() 
 	{
+		svgRoot = document.getElementById('svgRoot');
 		//初始化有效点和背景矩阵
 		initValidPoints();
 		BK_GRIDS = initBrainPuzzleGrids()
@@ -238,34 +345,24 @@
 		bkSvg = Snap("#svgFront");
 		frontSvg = Snap("#svgFront");
 		
-		//Draw backgroup rects
-		for(var i=0; i<10; i++)
+		for(var i=0; i<VALID_POINTS.length; i++)
 		{
-			for(var j=0; j<10; j++)
-			{
-				//// Lets create big circle in the middle:
-				var rect = bkSvg.rect(i*GRID_SIZE, j*GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-				
-				var fillColor = INVALID_BK_COLOR;
-				if(BK_GRIDS[i][j] == VALID)
-					fillColor = VALID_BK_COLOR;
-					
-				// By default its black, lets change its attributes
-				rect.attr({
-					id: "BkGrid_" + i + "_" + j,
-					fill: fillColor,
-					stroke: HOVER_OUT_BK_STROKE,
-					strokeWidth: 1
-				});
-				
-				var hoverIn = function() {
-						this.attr({stroke: HOVER_IN_BK_STROKE, strokeWidth: 2});
-				}
-				var hoverOut = function() {
-						this.attr({stroke: HOVER_OUT_BK_STROKE, strokeWidth: 1});
-				}
-				rect.hover(hoverIn, hoverOut);
+			var rect = bkSvg.rect(VALID_POINTS[i].col*GRID_SIZE, VALID_POINTS[i].row*GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+			// By default its black, lets change its attributes
+			rect.attr({
+				id: "BkGrid_" + VALID_POINTS[i].col + "_" + VALID_POINTS[i].row,
+				fill: VALID_BK_COLOR,
+				stroke: HOVER_OUT_BK_STROKE,
+				strokeWidth: 1
+			});
+			
+			var hoverIn = function() {
+					this.attr({stroke: HOVER_IN_BK_STROKE, strokeWidth: 2});
 			}
+			var hoverOut = function() {
+					this.attr({stroke: HOVER_OUT_BK_STROKE, strokeWidth: 1});
+			}
+			rect.hover(hoverIn, hoverOut);
 		}
 		
 		drawGroups();
