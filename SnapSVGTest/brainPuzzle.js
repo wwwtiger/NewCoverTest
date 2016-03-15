@@ -118,6 +118,17 @@ sin cos  -sin*cx-cos*cy+cy
 
 */
 
+function getBlockIndexById(id)
+{
+	for(var i=0; i<brainPuzzleBlocks.length; i++)
+	{
+		if(brainPuzzleBlocks[i].name == id)
+			return i;
+	}
+	
+	return null;
+}
+
 function rotateByPoint(x, y, cx, cy, theta)
 {
 	var cos = Math.cos(theta);
@@ -183,11 +194,11 @@ function getPointNeighbourCount(tempGrids, col, row)
 {
 	var neighbours = [];
 	
-	if((row<(10-1)) && (tempGrids[col][row+1] == VALID)) 
+	if((row<(BK_ROWS-1)) && (tempGrids[col][row+1] == VALID)) 
 	{
 		neighbours.push({orient:0});
 	}
-	if((col<(10-1)) && (tempGrids[col+1][row] == VALID))
+	if((col<(BK_COLS-1)) && (tempGrids[col+1][row] == VALID))
 	{
 		neighbours.push({orient:1});
 	}
@@ -274,7 +285,7 @@ function testBlock(block, angle, mirrorX, grids, col, row) //²âÊÔ½«·½¿éÐý×ªangle
 		var newCol = col+offset.x;
 		var newRow = row+offset.y;
 		
-		if((newCol > 9) || (newRow > 9) || (newCol < 0) || (newRow < 0))
+		if((newCol > (BK_COLS-1)) || (newRow > (BK_ROWS-1)) || (newCol < 0) || (newRow < 0))
 		{
 			//console.log('Out of range at col:' + newCol + ', row:' + newRow);
 			return ret;
@@ -395,7 +406,7 @@ function loadProblem(problem)
 	
 }
 
-function findSpecificSolution()
+function findSpecificSolution(problem)
 {
 	//Search one solution
 	solutionStack = [];
@@ -405,7 +416,7 @@ function findSpecificSolution()
 	}
 	resultArray[0].useFlag = true; //Not use 'A'
 	
-	loadProblem(problem_218);
+	loadProblem(problem);
 	
 	if(findOneSolution())
 	{
@@ -422,6 +433,15 @@ function findSpecificSolution()
 	console.log(solutionStack);
 }
 
+function isValidPoint(validPoints, point)
+{
+	for(var i=0; i<validPoints.length; i++)
+	{
+		if((validPoints[i].col == point.col) && (validPoints[i].row == point.row))
+				return true;
+	}
+	return false;
+}
 	
 function pointsInUseFlag(usedPoints, newPoints)
 {
@@ -440,7 +460,7 @@ function pointsInUseFlag(usedPoints, newPoints)
 function findOneSolution()
 {
 	var findFlag = false;	
-	if(solutionStack.length >= 11) //Find one!
+	if(solutionStack.length >= (brainPuzzleBlocks.length-1)) //Find one!
 	{
 		//console.log(solutionStack);
 		//alert('findOneSolution');
