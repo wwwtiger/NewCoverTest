@@ -1,0 +1,46 @@
+<!DOCTYPE html5>
+<html>
+<script>
+	var s="123"; 
+	function init()
+	{
+		//alert(s);
+		recursive();
+		
+		var temp = [];
+		for(i in results)
+			temp.push(results[i].join());
+		console.log(temp);
+		console.log(temp.length);
+	}
+  
+      
+	s="234";
+		
+	
+	var results = [[]];
+	var elems = ["a", "b", "c", "d"];
+	
+	function recursive()
+	{
+		if(elems.length > 0)
+		{
+			var e = elems.pop();
+			var temp = [];
+			for(i in results)
+				temp.push(results[i].concat(e));
+			
+			results = results.concat(temp);
+			recursive();
+		}
+	}
+	
+
+
+	
+</script>
+<header>
+</header>
+<body onload=init()>
+</body>
+</html>

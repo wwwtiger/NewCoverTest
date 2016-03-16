@@ -255,7 +255,7 @@ function hasSinglePoint(tempGrids, deletePos)
 	return false;
 }
 
-//测试放置是否合法，如果合法，返回放置位置点的列表
+//测试放置是否合法，如果合法，返回放置位置点的列表，该数据可以作为静态数据
 function testBlock(block, angle, mirrorX, grids, col, row) //测试将方块旋转angle后，放置在grid的COL,ROW处是否合法
 {
 	var ret = {r:false, o:[]};
@@ -433,7 +433,7 @@ function findSpecificSolution(problem)
 	console.log(solutionStack);
 }
 
-function isValidPoint(validPoints, point)
+function isValidPoint(validPoints, point) //该点是否是有效点
 {
 	for(var i=0; i<validPoints.length; i++)
 	{
@@ -443,7 +443,7 @@ function isValidPoint(validPoints, point)
 	return false;
 }
 	
-function pointsInUseFlag(usedPoints, newPoints)
+function pointsInUseFlag(usedPoints, newPoints) //新增的点是否已经被占用
 {
 	for(var i=0; i<usedPoints.length; i++)
 	{
