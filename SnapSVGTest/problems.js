@@ -67,7 +67,7 @@ function findSolution()
 	{
 		resultArray[i].useFlag = false;
 	}
-	resultArray[this.ignoredIndex].useFlag = true; //Not use 'A'
+	resultArray[this.ignoredIndex].useFlag = true; //Not use 'A' or 'R' or 'G'
 	
 	loadProblem(this.initialBlocks);
 	

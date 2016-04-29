@@ -31,17 +31,17 @@
 
 	function resetGroupMatrix(blockIndex)
 	{
-		var temp = blockIndex % 3;
-		var row = (blockIndex - temp) / 3;
+		var temp = blockIndex % 4;
+		var row = (blockIndex - temp) / 4;
 		var offsetX = 500 + 200 * temp;
-		var offsetY = 80 + 150 * row;
-		
-		var id = "#" + brainPuzzleBlocks[blockIndex].name;
-		var group = Snap(id);
-		if(group != null)
-			group.attr({
-						transform: 'T' + [offsetX, offsetY]
-					});
+		var offsetY = 150 + 180 * row;
+			
+		var block = document.getElementById(brainPuzzleBlocks[blockIndex].name);
+		if(block != null)
+		{
+			block.setAttributeNS(null, "transform", "");
+			rotateElemByAngle(block, offsetX, offsetY, -PI/4, 0, 0);
+		}
 	}
 	
 	function drawSingleGroup(group, angle, mirrorX)
@@ -82,10 +82,10 @@
 		var len = brainPuzzleBlocks.length;
 		for(var i=0; i<len; i++)
 		{	
-			var temp = i % 3;
-			var row = (i - temp) / 3;
-			var offsetX = 500 + 200 * temp;
-			var offsetY = 80 + 150 * row;
+			//var temp = i % 4;
+			//var row = (i - temp) / 4;
+			//var offsetX = 500 + 200 * temp;
+			//var offsetY = 150 + 180 * row;
 			
 			//alert(brainPuzzleBlocks[i].name);
 			var group = brainPuzzleBlocks[i];
@@ -109,12 +109,17 @@
 				});
 				
 				svgGroup.add(rect);
-				svgGroup.attr({
-						transform: 'T' + [offsetX, offsetY]
-					});
+				
+				
 			}
-				
-				
+			
+			//var block = document.getElementById(group.name);
+			//rotateElemByAngle(block, offsetX, offsetY, -PI/4, 0, 0);
+			//svgGroup.attr({
+			//		transform: 'T' + [offsetX, offsetY]
+			//	});	
+			resetGroupMatrix(i);
+			
 			var move = function(dx,dy) {
 			this.attr({
 						transform: this.data('origTransform') + (this.data('origTransform') ? "T" : "t") + [dx, dy]
@@ -183,6 +188,26 @@
 		elem.setAttributeNS(null, "transform", transformStr);
 	}
 	
+	function rotateElemByAngle(elem, dx, dy, angle, rx, ry) //dx,dy 为旋转后移动，rx ry为旋转中心
+	{
+		var sin = Math.sin(angle);
+		var cos = Math.cos(angle);
+				
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = transMatrix.a * cos - transMatrix.b * sin;
+		newMatrix.b = transMatrix.a * sin + transMatrix.b * cos;
+		newMatrix.c = transMatrix.c * cos - transMatrix.d * sin;
+		newMatrix.d = transMatrix.c * sin + transMatrix.d * cos;
+		newMatrix.e = transMatrix.e * cos - transMatrix.f * sin - rx * cos + ry * sin + rx + dx ;
+		newMatrix.f = transMatrix.e * sin + transMatrix.f * cos - rx * sin - ry * cos + ry + dy ;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(newMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
 
 	function rotateElem(elem, cx, cy, rotateFlag, rx, ry)
 	{
@@ -224,6 +249,31 @@
 		elem.setAttributeNS(null, "transform", transformStr);
 	}
 	
+	function reverseMatrix(matrix)
+	{
+		//var da = a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2- c1*b2);
+		//var a = (b2*c3-c2*b3)/da;
+		//var b = (c2*a3-a2*c3)/da;
+		//var c = (c1*b3-b1*c3)/da;
+		//var d = (a1*c3-c1*a3)/da;
+		//var e = (b1*c2-c1*b2)/da;
+		//var f = (a2*c1-a1*c2)/da;
+		var newMatrix = svgRoot.createSVGMatrix();
+		var da = matrix.a*matrix.d-matrix.b*matrix.c;
+		if(da == 0)
+			return newMatrix;
+			
+		newMatrix.a = matrix.d / da;
+		newMatrix.b = -matrix.b / da;
+		newMatrix.c = -matrix.c/da;
+		newMatrix.d = matrix.a/da;
+		newMatrix.e = (matrix.c*matrix.f-matrix.e*matrix.d) /da;
+		newMatrix.f = (matrix.b*matrix.e - matrix.a*matrix.f) / da;
+		
+		return newMatrix;
+	}
+	
+	
 	function getTransformPoint(point, matrix)
 	{
 		var x = matrix.a * point.x + matrix.c*point.y + matrix.e;
@@ -233,6 +283,11 @@
 	
 	function recordBlockPos(id, elem) //在拖放后，记录问题的初始化块
 	{
+		var bkGroup = document.getElementById("bkRects");
+		var bkMatrix = bkGroup.getCTM();
+		var rMatrix = reverseMatrix(bkMatrix);
+		console.log(rMatrix);
+		
 		var transMatrix = elem.getCTM();
 		console.log(transMatrix);
 		
@@ -250,6 +305,12 @@
 			console.log(org1, org2);
 			var dest1 = getTransformPoint(org1, transMatrix);
 			var dest2 = getTransformPoint(org2, transMatrix);
+			
+			//Reverse transform by bkGroup's matrix
+			dest1 = getTransformPoint(dest1, rMatrix);
+			dest2 = getTransformPoint(dest2, rMatrix);
+			
+			
 			console.log(dest1, dest2);
 			var newPos = getColRow((dest1.x + dest2.x)/2, (dest1.y + dest2.y)/2);
 			console.log(newPos);
@@ -258,8 +319,13 @@
 			
 			if(i==0) //依靠矩形的中间点来判断位置和偏移量
 			{
-				offsetX = (newCol + 1/2) * GRID_SIZE - (dest1.x + dest2.x)/2;
-				offsetY = (newRow + 1/2) * GRID_SIZE - (dest1.y + dest2.y)/2;
+				org1 = {x:newCol*GRID_SIZE , y:newRow *GRID_SIZE};
+				org2 = {x:newCol*GRID_SIZE + BLOCK_SIZE , y:newRow*GRID_SIZE + BLOCK_SIZE};
+				//org1 = getTransformPoint(org1, bkMatrix);
+				//org2 = getTransformPoint(org2, bkMatrix);
+			
+				offsetX = (org1.x + org2.x)/2 - (dest1.x + dest2.x)/2;
+				offsetY = (org1.y + org2.y)/2 - (dest1.y + dest2.y)/2;
 			}
 			
 			pos.push(newPos);
@@ -441,7 +507,7 @@
 		svgRoot = document.getElementById('svgRoot');
 		//初始化有效点和背景矩阵
 		initValidPoints();
-		BK_GRIDS = initBrainPuzzleGrids()
+		BK_GRIDS = initBrainPuzzleGrids();
 		//initSolution();
 		
 		// First lets create our drawing surface out of existing SVG element
@@ -449,6 +515,11 @@
 		// like s = Snap(800, 600);
 		bkSvg = Snap("#svgFront");
 		frontSvg = Snap("#svgFront");
+		
+		var bkRects = frontSvg.group();
+		bkRects.attr({
+				id: "bkRects",
+				});
 		
 		for(var i=0; i<VALID_POINTS.length; i++)
 		{
@@ -468,8 +539,13 @@
 					this.attr({stroke: HOVER_OUT_BK_STROKE, strokeWidth: 1});
 			}
 			rect.hover(hoverIn, hoverOut);
+			
+			bkRects.add(rect);
 		}
 		
+		var bkGroup = document.getElementById("bkRects");
+		rotateElemByAngle(bkGroup, 250, 0, PI/4, 0, 0);
+
 		drawGroups();
 	}
 	
@@ -479,7 +555,7 @@
 <body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
 	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
 	<svg id="svgFront" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
-	<div style="position:absolute;left:50px;top:400px;-moz-user-select:none;-webkit-user-select:none;">
+	<div style="position:absolute;left:50px;top:420px;-moz-user-select:none;-webkit-user-select:none;">
 		  <label>Type:</label>            
           <input type = "checkBox"
                  name = "rotateFlag"
@@ -488,8 +564,8 @@
 				 checked = "rotate" />
           <label for = "rotate">rotate</label>
 	 </div>
-	<input type="button" onclick="resetGame()" style="position:absolute;left:200px;top:400px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Reset Game">
-    <input type="button" onclick="startGame()" style="position:absolute;left:300px;top:400px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start Game">
+	<input type="button" onclick="resetGame()" style="position:absolute;left:200px;top:420px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Reset Game">
+    <input type="button" onclick="startGame()" style="position:absolute;left:300px;top:420px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start Game">
 
 </body>   
 </html>  
