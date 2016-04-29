@@ -1,8 +1,199 @@
-<!DOCTYPE html5>
+<!DOCTYPE html>
 <html>
+<head>
 <script>
 	var s="123"; 
+	var svgRoot;
+	var svgNS = "http://www.w3.org/2000/svg";
+
 	function init()
+	{
+		//var a = "bbc";
+		//var b = "acc";
+		//if(a>b)
+		//	alert("a>b");
+		//else
+		//	alert("a<b");
+			
+		svgRoot = document.getElementById("svgRoot");
+		var path = document.createElementNS(svgNS, "path");
+		path.setAttributeNS(null, "d", "M 100 100 L 200 200");
+		path.setAttributeNS(null, "stroke", "red");
+		path.setAttributeNS(null, "stroke-width", "3");
+		svgRoot.appendChild(path);
+		//var temp = initNodeList(10);
+		//console.log(temp);
+		//
+		//if(temp[0]!=null)
+		//	ReverseNodeList(null, temp[0]);
+		//console.log(temp); 
+		
+		//console.log(getRobResult());
+		
+		//console.log(palindromePairs(words));
+		
+		/* sort 
+		var cross = [5, 4, 1, 2, 5, 9, 34, 2, 4, 101, 789, 45,883,90,2323,44,442];
+		//console.log(increasingTriplet2(cross));
+		
+		//console.log(zigZagconvert("PAYPALISHIRING",3));
+		var start = performance.now(); //new Date().getTime();
+		//bubbleSort(cross);
+		var cross = quickSort(cross);
+		var end = performance.now();
+		console.log(cross);
+		console.log(end-start);
+		*/
+		
+		/*
+		tickets = quickSort2(tickets);
+		console.log(tickets);
+		
+		var ticketResult = [];
+		recursiveFind(ticketResult, tickets, "JFK");
+		console.log(ticketResult);
+		
+		
+		var nums = [1, 5, 10, 18], n = 50
+		var result = minPatches(nums, n);
+		console.log(result);
+		*/
+		
+		var max = getMaxScore();
+		console.log(max);
+	}
+	
+	
+	//330
+	var minPatches = function(nums, n) {
+		var result = [];
+		var cover = 1;
+		if(nums[0] != 1)
+		{
+			result.push(1); //At least begin with 1
+			recursiveCover(result, nums, 0, cover, n);
+		}
+		else
+			recursiveCover(result, nums, 1, cover, n);
+		return result;
+	};
+	
+	var recursiveCover = function(result, nums, index, cover, n)
+	{
+		if(cover < n)
+		{
+			if((index >= nums.length) || (nums[index] > (cover + 1)))
+			{
+				result.push(cover + 1);
+				cover = 2*cover + 1;
+			}
+			else
+			{
+				cover = cover + nums[index];
+				index += 1;
+			}
+			
+			recursiveCover(result, nums, index, cover, n);
+		}
+	}
+	
+	function quickSort(nums)
+	{
+		if(nums.length <= 1)
+			return nums;
+			
+		var left = [];
+		var right = [];
+		
+		for(var i=1; i<nums.length; i++)
+		{
+			if(nums[i] > nums[0]) right.push(nums[i]);
+			else left.push(nums[i]);
+		}
+		
+		var result = [].concat(quickSort(left), [nums[0]], quickSort(right))
+		return result;
+	}
+	
+	var tickets = [["JFK","BEI"],["JFK","ATL"],["SFO","ATL"],["ATL","JFK"],["ATL","SFO"]];
+	function ticketCompare(elem1, elem2)
+	{
+		if(elem1[0] != elem2[0])
+			return elem1[0] > elem2[0];
+		else
+			return elem1[1] > elem2[1];
+	}
+	
+	function quickSort2(nums)
+	{
+		if(nums.length <= 1)
+			return nums;
+			
+		var left = [];
+		var right = [];
+		
+		for(var i=1; i<nums.length; i++)
+		{
+			if(ticketCompare(nums[i] , nums[0])) 
+				right.push(nums[i]);
+			else 
+				left.push(nums[i]);
+		}
+		
+		var result = [].concat(quickSort(left), [nums[0]], quickSort(right))
+		return result;
+	}
+	
+	function recursiveFind(result, tickets, src)
+	{	
+		for(i in tickets)
+		{
+			if(tickets[i][0]==src)
+			{
+				result.push(tickets[i]);
+				var next = tickets[i][1];
+				tickets.splice(i, 1);
+				//if(tickets.length > 0)
+					recursiveFind(result, tickets, next);
+				//else
+				//	result.push(next);
+			}
+		}
+	}
+	
+	
+	
+	//及时终止的冒泡排序，先从0到len-1，将最大元素移动到最右边，然后移动0到len-2，直到没有交换发生
+	function bubbleSort(nums)
+	{
+		for(var len=nums.length; len>1; len--)
+		{
+			if(!bubble(nums, len))
+				break;
+		}
+	}
+	function bubble(nums, len)
+	{
+		var flag = false;
+		for(var i=1; i<len; i++)
+		{
+			if(nums[i-1] > nums[i])
+			{
+				flag = true;
+				swap(nums, i-1, i);
+			}
+		}
+		return flag;
+	}
+	
+	function swap(nums, index1, index2)
+	{
+		var temp = nums[index1];
+		nums[index1] = nums[index2];
+		nums[index2] = temp;
+	}
+	
+	function subGroupTest()
 	{
 		//alert(s);
 		recursive();
@@ -21,7 +212,7 @@
 	var results = [[]];
 	var elems = ["a", "b", "c", "d"];
 	
-	function recursive()
+	function recursive() //递归方法求全部子集
 	{
 		if(elems.length > 0)
 		{
@@ -35,12 +226,262 @@
 		}
 	}
 	
-
+	function Node(value)
+	{
+		this.value = value;
+		this.next = null;
+	}
+	
+	function ReverseNodeList(front, current)
+	{
+		if(current == null)
+			return;
+			
+		var next = current.next;
+		current.next = front;
+		if(next != null)
+			ReverseNodeList(current, next);
+	}
+	
+	function initNodeList(count)
+	{
+		var temp = [];
+		for(var i=0; i<count; i++)
+		{
+			temp.push(new Node(i));
+			if(i>0)
+				temp[i-1].next = temp[i];
+		}
+		
+		return temp;
+	}
 
 	
+  function TreeNode(val) {
+      this.val = val;
+      this.left = this.right = null;
+ }
+ 
+ 	var array = [];
+
+ function createTree()
+ {
+	for(var i=0; i<6; i++)
+	{
+		var node = new TreeNode(0);
+		array.push(node);
+	}
+	
+	array[0].val = 3;
+	array[0].left = array[1];
+	array[0].right = array[2];
+	
+	array[1].val = 4;
+	array[1].left = array[3];
+	array[1].right = array[4];
+	
+	array[2].val = 5;
+	array[2].right = array[5];
+	
+	array[3].val = 1;
+	array[4].val = 3;
+	array[5].val = 1;
+	
+ }
+ //334 偷盗问题，树层次问题？
+/**
+ * @param {TreeNode} root
+ * @return {number}
+ */
+ var sum1=0, sum2=0;
+var rob = function(root, flag) {
+    if(flag)
+        sum1+=root.val;
+    else
+        sum2+=root.val;
+        
+    if(root.left != null)
+        rob(root.left, !flag);
+    if(root.right != null)
+        rob(root.right, !flag);
+};
+
+function getRobResult()
+{
+	createTree();
+	rob(array[0], true);
+	return sum1>sum2?sum1:sum2;
+}
+
+//回文问题，组合问题？
+var words = ["abcd", "dcba", "lls", "s", "sssll"]	
+
+var palindromePairs = function(words) {
+	var palindromeResult = [];	
+	for(var i=0; i<words.length; i++)
+	{
+		for(var j=i+1; j<words.length; j++)
+			{
+				var str = words[i].concat(words[j]);
+				if(IsPalindrome(str))
+					palindromeResult.push([i,j]);
+				str = words[j].concat(words[i]);
+				if(IsPalindrome(str))
+					palindromeResult.push([j, i]);
+			}
+	}
+	return palindromeResult;	
+};
+
+function IsPalindrome(str)
+{
+    var len=Math.floor(str.length/2);
+    for(var i=0; i<len; i++)
+    {
+        if(str[i]!=str[str.length-1-i])
+            return false;
+    }
+    return true;
+}
+	
+//var cross = [2, 1, 1, 2];
+//转化为坐标问题，而且由于是直线，因此可以转为范围问题。	
+var isSelfCrossing = function(x) {
+    var xScope = {min: 0-x[0], max: x[3]-x[1]};
+    var yScope = {min: 0, max:x[0]};
+    
+    var xVal = 0;
+    var yVal = x[0] - x[2];
+    
+    if(isInScope(xVal, xScope) && isInScope(yVal, yScope))
+        return true;
+    else
+        return false;
+};
+
+function isInScope(val, scope)
+{
+    if(val >= scope.min && val <= scope.max)
+        return true;
+    return false;
+}	
+
+//三个数字升序问题，可以转换为记录最大最小数，并记录下标？
+var increasingTriplet = function(nums) {
+    for(var i=0; i<nums.length; i++)
+    {
+        for(var j=i+1; j<nums.length; j++)
+        {
+            for(var k=j+1; k<nums.length; k++)
+                if((nums[i] < nums[j]) && (nums[j] < nums[k]))
+                    return {flag: true, pos:[i, j, k]};
+        }
+    }
+    
+    return{flag:false, pos:null};
+};
+
+function increasingTriplet2(nums) {
+  for (var m, m2, i = 0; i < nums.length; i++) {
+    if (m === undefined || nums[i] <= m) m = nums[i];
+    else if (m2 === undefined || nums[i] <= m2) m2 = nums[i];
+    else return true;
+  }
+  return false;
+}
+
+var zigZagconvert = function(s, numRows) {
+    var array = [];
+	for(var i=0; i<numRows; i++)
+		array.push([]);
+		
+	for(i in s)
+	{
+		var index = i%(numRows+1);
+		if(index == numRows)
+			array[(numRows-1)/2].push(s[i]);
+		else
+			array[index].push(s[i]);
+	}
+	
+	console.log(array);
+	var result = '';
+	for(var i=0; i<numRows; i++)
+		result=result + array[i].join('');
+	return result;
+};	
+
+
+
+
+
+/*
+var findItinerary = function(tickets) {
+		var result = [];
+		var initSearch = "JFK";
+		for(i in tickets)
+		{
+			if(tickets[i][0] = "initSearch")
+				
+		}
+};
+*/
+var compareIATA = function(code1, code2)
+{
+	if(code1 == code2)
+		return -1;
+		
+	for(i in code1)
+	{
+		if(code1[i] > code2[i])
+			return 1;
+		else if(code1[i] < code2[i])
+			return 0;
+	}
+}
+
+var balloons = [3, 1, 5, 8];
+var getScore = function(index)
+{
+	if(index == 0)
+		return balloons[0] * balloons[1];
+	else if(index == balloons.length-1)
+		return balloons[index -1 ] * balloons[index];
+	else if((index < 0) || index > (balloons.length-1))
+		return 1;
+	else 
+		return balloons[index -1 ] * balloons[index] * balloons[index+1];
+}
+
+var balloonDP = function(i, j)
+{
+	if(j<=i)
+		return 1;
+		
+	var score = 0, maxScore = 0;
+	for(var k=i+1; k<j; k++)
+	{
+		var s1 = balloonDP(i, k-1);
+		var s2 = balloonDP(k+1, j);
+		var s3 = getScore(k);
+		score =  s1+s2+s3;
+		if(score > maxScore)
+			maxScore = score;
+	}
+	
+	return maxScore;
+}
+
+var getMaxScore = function()
+{
+	var max = balloonDP(0, balloons.length-1); 
+	return max;
+}
+
 </script>
-<header>
-</header>
+</head>
+
 <body onload=init()>
+	<svg id="svgRoot" width="100%" height="100%"/>
 </body>
 </html>

@@ -1,0 +1,70 @@
+<body>
+<div id="container" style="width:200px;height:200px;border:1px solid"></div>
+<script type="text/javascript">
+var container = document.getElementById("container");
+container.addEventListener("drop", handleDrop, false);
+container.addEventListener("dragover", handleDrop, false);
+container.addEventListener("dragenter", handleDrop, false);
+
+
+window.onload = function() 
+{
+if (window.File && window.FileReader && window.FileList && window.Blob)       
+{
+//全部支持
+alert('Support all');
+} 
+else {
+alert('该浏览器不全部支持File APIs的功能');
+}
+}
+
+function handleDrop(evt){
+evt.stopPropagation();
+evt.preventDefault();
+if(evt.type == "drop"){
+var dt = evt.dataTransfer;
+handleFile(dt.files[0]);
+}
+}
+
+function handleFile(file){
+if(file == null)return;
+alert(file.type);//获取文件的MIME类型
+alert(file.size);//获取文件的Size大小
+
+var reader = new FileReader();
+reader.onerror = handleFileError;
+reader.onload = handleFileLoad;
+reader.onloadend = handleFileLoadEnd;
+reader.onprogress = handleFileProgress;
+reader.readAsBinaryString(file);
+}
+
+function handleFileProgress(evt){
+//载入进度显示
+//进度获取evt.loaded, evt.total
+//alert(["progress", evt.loaded, evt.total]);
+}
+
+function handleFileLoad(evt){
+var result = evt.currentTarget.result;
+var minLen = result.length > 10 ? 10 : result.length;
+//alert(minLen);
+var str = "";
+for(var i=0; i<minLen; i++)
+	str += result.charCodeAt(i) + " ";
+alert(str);
+}
+
+function handleFileError(evt){
+//载入错误
+//alert(evt.currentTarget.error);
+}
+function handleFileLoadEnd(evt){
+//载入结束(不管是成功，还是失败)
+alert(evt.currentTarget);
+//console.log(evt.currentTarget.result); 
+}
+</script>
+</body>

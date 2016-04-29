@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	* { margin: 0; padding: 0; }
+	html, body { height: 100%; width: 100%; }
+	
+	body
+	{
+		background-color: #000000;
+		-moz-user-select:   none; 
+	}
+</style>
+<script type="text/javascript" src="problems.js"></script>  	
+<script type="text/javascript" src="brainPuzzle.js"></script>  
+<script type="text/javascript" src="commonFuncs.js"></script>  
+<script src="../../Hammer/hammer.js"></script>
+
+<script type="text/javascript" > 
+	var svgNS = "http://www.w3.org/2000/svg";
+	var xlinkNS="http://www.w3.org/1999/xlink";
+	var evNS = "http://www.w3.org/2001/xml-events"
+
+	var BLOCK_SIZE = 48;
+	var GRID_SIZE = BLOCK_SIZE + 1;
+
+	var INVALID_BK_COLOR = "black";
+	var VALID_BK_COLOR = "grey";
+	var HOVER_IN_BK_STROKE = "red";
+	var HOVER_OUT_BK_STROKE = "black";
+
+	var bkSvg;
+	var frontSvg;
+	var svgRoot, testCircle;
+	var pp = new PuzzleProblem(); //问题列表
+
+	function resetGroupMatrix(blockIndex)
+	{
+		var temp = blockIndex % 6;
+		var row = (blockIndex - temp) / 6;
+		var offsetX = 460 + 150 * temp;
+		var offsetY = 320 + 240 * row;
+			
+		var block = document.getElementById(brainPuzzleBlocks[blockIndex].name);
+		if(block != null)
+		{
+			block.setAttributeNS(null, "transform", "");
+			rotateElemByAngle(block, offsetX, offsetY, -PI/4, 0, 0);
+		}
+	}
+	
+	function drawSingleGroup(group, angle, mirrorX)
+	{
+		var ptLen = group.points.length;
+		var svgGroup = frontSvg.group();
+		svgGroup.attr({
+				id: group.name,
+				});
+		
+		var org = group.points[0];
+		for(var j = 0; j<ptLen; j++)
+		{
+			var pt = {x: group.points[j].x, y:group.points[j].y};
+			
+			if(mirrorX == 1)
+				pt.y = -pt.y;
+				
+			var rpt = rotateByPoint(pt.x, pt.y, org.x, org.y, angle);
+			var rect = frontSvg.rect(rpt.x*GRID_SIZE , rpt.y*GRID_SIZE , BLOCK_SIZE, BLOCK_SIZE);
+			
+			// By default its black, lets change its attributes
+			rect.attr({
+				fill: group.color,
+				stroke: "blue",
+				strokeWidth: 2
+			});
+			
+			svgGroup.add(rect);
+		}
+		
+		return svgGroup;
+	}
+	
+	var currObj = null;
+	
+	function matrixToStr(matrix)
+	{
+		var transformStr = "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," 
+					+ matrix.d + "," + matrix.e + "," + matrix.f + ")";
+		return transformStr;
+	}
+
+	function mirrorByLine(elem, a, b, c) //line: ax + by + c = 0
+	{
+		var s = 1/(a*a + b*b);
+		
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = s*(b*b - a*a);
+		newMatrix.c = s*(0 - 2*a*b);
+		newMatrix.e = s*(0 - 2*a*c);
+		newMatrix.b = newMatrix.b;
+		newMatrix.d = s*(a*a - b*b);
+		newMatrix.f = s*(0 - 2*b*c);
+		
+		//		aa+cb     ac+cd    ae+cf+e
+		// 		ba+db     bc+dd    be+df+f
+ 
+		var resultMatrix = svgRoot.createSVGMatrix();
+		resultMatrix.a = newMatrix.a * transMatrix.a + newMatrix.c * transMatrix.b;
+		resultMatrix.c = newMatrix.a * transMatrix.c + newMatrix.c * transMatrix.d;
+		resultMatrix.e = newMatrix.a * transMatrix.e + newMatrix.c * transMatrix.f + newMatrix.e;
+		resultMatrix.b = newMatrix.b * transMatrix.a + newMatrix.d * transMatrix.b;
+		resultMatrix.d = newMatrix.b * transMatrix.c + newMatrix.d * transMatrix.d;
+		resultMatrix.f = newMatrix.b * transMatrix.e + newMatrix.d * transMatrix.f  + newMatrix.f;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(resultMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+	
+	function rotateElemByAngle(elem, dx, dy, angle, rx, ry) //dx,dy 为旋转后移动，rx ry为旋转中心
+	{
+		var sin = Math.sin(angle);
+		var cos = Math.cos(angle);
+				
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = transMatrix.a * cos - transMatrix.b * sin;
+		newMatrix.b = transMatrix.a * sin + transMatrix.b * cos;
+		newMatrix.c = transMatrix.c * cos - transMatrix.d * sin;
+		newMatrix.d = transMatrix.c * sin + transMatrix.d * cos;
+		newMatrix.e = transMatrix.e * cos - transMatrix.f * sin - rx * cos + ry * sin + rx + dx ;
+		newMatrix.f = transMatrix.e * sin + transMatrix.f * cos - rx * sin - ry * cos + ry + dy ;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(newMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+
+	function reverseMatrix(matrix)
+	{
+		//var da = a1*(b2*c3-c2*b3)-a2*(b1*c3-c1*b3)+a3*(b1*c2- c1*b2);
+		//var a = (b2*c3-c2*b3)/da;
+		//var b = (c2*a3-a2*c3)/da;
+		//var c = (c1*b3-b1*c3)/da;
+		//var d = (a1*c3-c1*a3)/da;
+		//var e = (b1*c2-c1*b2)/da;
+		//var f = (a2*c1-a1*c2)/da;
+		var newMatrix = svgRoot.createSVGMatrix();
+		var da = matrix.a*matrix.d-matrix.b*matrix.c;
+		if(da == 0)
+			return newMatrix;
+			
+		newMatrix.a = matrix.d / da;
+		newMatrix.b = -matrix.b / da;
+		newMatrix.c = -matrix.c/da;
+		newMatrix.d = matrix.a/da;
+		newMatrix.e = (matrix.c*matrix.f-matrix.e*matrix.d) /da;
+		newMatrix.f = (matrix.b*matrix.e - matrix.a*matrix.f) / da;
+		
+		return newMatrix;
+	}
+	
+	function getTransformPoint(point, matrix)
+	{
+		var x = matrix.a * point.x + matrix.c*point.y + matrix.e;
+		var y = matrix.b * point.x + matrix.d*point.y + matrix.f;
+		return {x:x, y:y};
+	}
+	
+	function recordBlockPos(id, elem) //在拖放后，记录问题的初始化块
+	{
+		var bkGroup = document.getElementById("bkRects");
+		var bkMatrix = bkGroup.getCTM();
+		var rMatrix = reverseMatrix(bkMatrix);
+		console.log(rMatrix);
+		
+		var transMatrix = elem.getCTM();
+		console.log(transMatrix);
+		
+		var nodes = elem.childNodes;
+		//alert(nodes.length);
+		
+		var pos = [];
+		var offsetX = 0, offsetY = 0;
+		for(var i = 0; i < nodes.length; i++)
+		{
+			var x = Number(nodes.item(i).getAttributeNS(null, "x")) ;
+			var y = Number(nodes.item(i).getAttributeNS(null, "y")) ;
+			var org1 = {x:x , y:y };
+			var org2 = {x:x+ GRID_SIZE, y:y+ GRID_SIZE}
+			console.log(org1, org2);
+			var dest1 = getTransformPoint(org1, transMatrix);
+			var dest2 = getTransformPoint(org2, transMatrix);
+			
+			//Reverse transform by bkGroup's matrix
+			dest1 = getTransformPoint(dest1, rMatrix);
+			dest2 = getTransformPoint(dest2, rMatrix);
+			
+			
+			console.log(dest1, dest2);
+			var newPos = getColRow((dest1.x + dest2.x)/2, (dest1.y + dest2.y)/2);
+			console.log(newPos);
+			var newCol = newPos.col;
+			var newRow = newPos.row;
+			
+			if(i==0) //依靠矩形的中间点来判断位置和偏移量
+			{
+				org1 = {x:newCol*GRID_SIZE , y:newRow *GRID_SIZE};
+				org2 = {x:newCol*GRID_SIZE + BLOCK_SIZE , y:newRow*GRID_SIZE + BLOCK_SIZE};
+				//org1 = getTransformPoint(org1, bkMatrix);
+				//org2 = getTransformPoint(org2, bkMatrix);
+			
+				offsetX = (org1.x + org2.x)/2 - (dest1.x + dest2.x)/2;
+				offsetY = (org1.y + org2.y)/2 - (dest1.y + dest2.y)/2;
+			}
+			
+			pos.push(newPos);
+		}
+		
+		var flag = true; //是否放置在有效地点，(放置后需要更新VALID POINT列表）
+		for(var i=0; i<pos.length; i++)
+		{
+			if(!isValidPoint(VALID_POINTS, pos[i]))
+				flag = false;
+		}
+		
+		var blockIndex = getBlockIndexById(id);
+		if(flag)
+		{
+			if(pp.addBlock(blockIndex, pos)) //Record as problem's initial block
+			{
+				highlightBlock(pos, brainPuzzleBlocks[blockIndex].color, 2);
+				//moveElem(elem, offsetX, offsetY); //Move element to exact position
+			}
+		}
+		else //删除无效放置的块
+			pp.deleteBlock(blockIndex);
+	}
+	
+	//var currentProblem = [];
+	
+	function getColRow(x, y) //得到近似的行和列
+	{
+		var col = Math.floor(x/GRID_SIZE);
+		var row = Math.floor(y/GRID_SIZE);
+		return {col:col, row:row};
+	}
+	
+	function onDbClickBlock(evt)//镜像或旋转
+	{
+		//if(evt.detail != 2)
+		//	return;
+			
+		var id = this.attr("id");
+		var block = document.getElementById(id);
+		
+		if(document.getElementById("rotate").checked)
+			mirrorByLine(block, 0, 1, -evt.y);
+		else
+			rotateElemByAngle(block, 0, 0, PI/2, evt.x, evt.y);
+	}
+	
+	function highlightBlock(posArray, color, width) 
+	{
+		for(var j=0; j<posArray.length; j++)
+		{
+			var pos = posArray[j];
+			var id = "BkGrid_" + pos.col + "_" + pos.row;
+			//var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			var rect = document.getElementById(id);
+			if(rect != null)
+			{
+				rect.setAttributeNS(null, "stroke", color);
+				rect.setAttributeNS(null, "stroke-width", width);
+			}
+		}
+	}
+	
+	function drawBlock(posArray, color) 
+	{
+		for(var j=0; j<posArray.length; j++)
+		{
+			var pos = posArray[j];
+			var id = "BkGrid_" + pos.col + "_" + pos.row;
+			//var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			var rect = document.getElementById(id);
+			if(rect != null)
+				rect.setAttributeNS(null, "fill", color);
+		}
+	}
+	
+	function drawSolution()
+	{
+		for(var i=0; i<solutionStack.length; i++)
+		{
+			var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			drawBlock(solutionStack[i].pos, color);
+		}
+	}
+	
+	function findAllPossiblePos()
+	{
+		if(resultArray.length == 0)
+		{
+			//Get all possible position
+			for(var i=0; i<brainPuzzleBlocks.length; i++)
+			{
+				testGroupOnGrid(i);
+			}
+			
+			console.log(resultArray);
+			console.log('Find all positions ');
+		}
+	}
+
+	function resetGame()	
+	{	
+		console.log('Reset...');
+		//findAllPossiblePos();
+		//findSpecificSolution(problem_218);
+		pp.reset();
+		
+		for(i in brainPuzzleBlocks)
+		{
+			resetGroupMatrix(i);
+		}
+	}	
+
+	function startGame()	
+	{	
+		console.log('Start...');
+		findAllPossiblePos();
+		pp.findSolution();
+	}	
+	
+	
+	function resetBkGrid()
+	{
+		for(var i=0; i<VALID_POINTS.length; i++)
+		{
+			var id = "BkGrid_" + VALID_POINTS[i].col + "_" + VALID_POINTS[i].row;
+			//var color = brainPuzzleBlocks[solutionStack[i].blockIndex].color;
+			var rect = document.getElementById(id);
+			if(rect != null)
+			{
+				rect.setAttributeNS(null, "fill", VALID_BK_COLOR);
+				rect.setAttributeNS(null, "stroke", HOVER_OUT_BK_STROKE);
+				rect.setAttributeNS(null, "stroke-width", 1);
+			}
+		}
+	}
+	
+	function updateStatusText(id, str)
+	{
+		//var status = document.getElementById(id);   
+		//status.firstChild.data = str;
+	}
+	
+	var dragObj = null;
+	var lastX = 0, lastY = 0;
+
+	function moveElem(elem, dx, dy) //dx,dy 为旋转后移动，rx ry为旋转中心
+	{
+		var transMatrix = elem.getCTM();
+		//var newMatrix = svgRoot.createSVGMatrix();
+		//newMatrix.a = transMatrix.a;
+		//newMatrix.b = transMatrix.b;
+		//newMatrix.c = transMatrix.c;
+		//newMatrix.d = transMatrix.d;
+		//newMatrix.e = transMatrix.e + dx ;
+		//newMatrix.f = transMatrix.f + dy ;
+		
+		transMatrix.e = transMatrix.e + dx ;
+		transMatrix.f = transMatrix.f + dy ;
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(transMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+	
+	function rotateElemByAngle(elem, dx, dy, angle, rx, ry) //dx,dy 为旋转后移动，rx ry为旋转中心
+	{
+		var sin = Math.sin(angle);
+		var cos = Math.cos(angle);
+				
+		var transMatrix = elem.getCTM();
+		var newMatrix = svgRoot.createSVGMatrix();
+		newMatrix.a = transMatrix.a * cos - transMatrix.b * sin;
+		newMatrix.b = transMatrix.a * sin + transMatrix.b * cos;
+		newMatrix.c = transMatrix.c * cos - transMatrix.d * sin;
+		newMatrix.d = transMatrix.c * sin + transMatrix.d * cos;
+		newMatrix.e = transMatrix.e * cos - transMatrix.f * sin - rx * cos + ry * sin + rx + dx ;
+		newMatrix.f = transMatrix.e * sin + transMatrix.f * cos - rx * sin - ry * cos + ry + dy ;
+		
+		//好像没有setCTM函数，因此需要将矩阵转换为transformStr，然后通过属性赋值
+		var transformStr = matrixToStr(newMatrix);
+		//alert(transformStr);
+		
+		elem.setAttributeNS(null, "transform", transformStr);
+	}
+	
+	function addHammer()
+	{
+		var hammer = new Hammer(svgRoot);
+		hammer.prevent_default = true;
+		hammer.drag_min_distance = 20;
+		//hammer.css_hacks = false;
+		
+		//接收触摸屏事件，包括拖动，点击，保持和变换
+		//Now, on every gesture that is performed on the container element, you'll receive a callback object with information on the gesture.
+		hammer.ondragstart = function(ev) 
+		{	
+			lastX = 0;
+			lastY = 0;
+			updateStatusText("moveStatus", "drag start");
+			
+			if(currObj != null)
+			{
+				currObj.setAttributeNS(null, "pointer-events", "none");
+			}
+		};      
+		hammer.ondrag = function(ev) 
+		{	
+			var offsetX = ev.distanceX - lastX;
+			var offsetY = ev.distanceY - lastY;
+			lastX = ev.distanceX;
+			lastY = ev.distanceY;
+			
+			if(currObj != null)
+				moveElem(currObj, offsetX, offsetY);
+			//rotateElemByAngle(testCircle, offsetX, offsetY, 0, 0, 0);
+			//根据鼠标拖动移动SVG PATH
+			//var block = getBlockByPath(currPath);
+			//var region = getRegionByBlock(block);
+			//translateRegion(region, offsetX, offsetY);
+			//highlightRegion(region);
+		};
+		
+		hammer.ondragend = function(ev) 
+		{	
+			var id = currObj.getAttributeNS(null, "id");
+			console.log(id + ' finished dragging');
+			var block = document.getElementById(id);
+			recordBlockPos(id, block);
+			
+			lastX = 0;
+			lastY = 0;
+			updateStatusText("moveStatus", "drag end " + ev.distance + "," + ev.direction); 
+			if(currObj != null)
+			{
+				currObj.setAttributeNS(null, "pointer-events", "all");
+				currObj = null;
+			}
+		};
+		
+		hammer.ontap = function(ev) 
+		{ 	
+			//if(currPath == null)
+			//	return;
+			//currPath.setAttributeNS(null, "pointer-events", "all");	
+			//
+			//var targetElement = ev.originalEvent.target;
+			//var eid = targetElement.getAttribute("id");
+			////alert(eid.substr(0, 4));
+			//
+			//if ( eid.substr(0, 4) == PATH_ID )
+			//{
+			//	var block = getBlockByPath(targetElement);
+			//	var region = getRegionByBlock(block);
+			//	highlightRegion(region);
+			//}
+		};
+		
+		hammer.ondoubletap = function(ev) 
+		{ 	
+			if(currObj == null)
+				return;
+			currObj.setAttributeNS(null, "pointer-events", "all");	
+			
+			var cx, cy;
+			cx = ev.originalEvent.pageX; //- offsets.left;
+			cy = ev.originalEvent.pageY; // - offsets.top;
+		
+			if(ev.originalEvent.button == 0)
+				rotateElemByAngle(currObj, 0, 0, PI/2, cx, cy);
+			else
+				mirrorByLine(currObj, 0, 1, -cy);
+				
+			currObj = null;
+		};
+		
+		hammer.onhold = function(ev) { };
+		hammer.ontransformstart = function(ev) { };
+		hammer.ontransform = function(ev) { };
+		hammer.ontransformend = function(ev) { };
+	}
+
+	function setBlockEvent(elem)
+	{
+		elem.onmousedown = function(){ 
+			if(currObj != this)
+			{
+				currObj = this;
+				svgRoot.removeChild(currObj);
+				svgRoot.appendChild(currObj);
+
+				this.setAttributeNS(null, "pointer-events", "none");
+			}
+			this.setAttributeNS(null, "stroke", "red");
+			this.setAttributeNS(null, "stroke-width", 3); 
+			//currObj.setAttributeNS(null, "stroke-width", 2*OUTLINE_STROKE_WIDTH);
+			}; //Hammer的ondragstart有延时，因此用onmousedown代替
+			
+		elem.onmouseup = function(){ 
+			if(currObj == this) 
+				this.setAttributeNS(null, "pointer-events", "all"); 
+		}; 
+		
+		elem.onmouseover = function(){
+			
+			//this.setAttributeNS(null, "fill-opacity", "0.5"); 
+			this.setAttributeNS(null, "stroke", "black");
+			this.setAttributeNS(null, "stroke-width", 3); 
+			var idStr = this.getAttributeNS(null, "id"); 
+			console.log('Mouse over ' + idStr);
+
+		}; 
+		elem.onmouseout = function(){ 
+			//this.setAttributeNS(null, "fill-opacity", "0");
+			this.setAttributeNS(null, "stroke", null);
+			this.setAttributeNS(null, "stroke-width", 0); 
+		}; 
+	}
+	
+	function setBkRectEvent(elem)
+	{
+		elem.onmouseover = function(){
+			this.setAttributeNS(null, "fill-opacity", "0.5"); 
+			this.setAttributeNS(null, "stroke", "red");
+			this.setAttributeNS(null, "stroke-width", 3); 
+			var idStr = this.getAttributeNS(null, "id"); 
+			console.log('Mouse over ' + idStr);
+
+		}; 
+		elem.onmouseout = function(){ 
+			this.setAttributeNS(null, "fill-opacity", "1");
+			this.setAttributeNS(null, "stroke", HOVER_OUT_BK_STROKE);
+			this.setAttributeNS(null, "stroke-width", 1); 
+		}; 
+	}
+	
+
+	function drawBkRects()
+	{
+		var svgGroup = document.createElementNS(svgNS, 'g');   
+		svgGroup.setAttribute('id', 'bkRects');   			
+		
+		for(var i=0; i<VALID_POINTS.length; i++)
+		{
+			//var rect = bkSvg.rect(VALID_POINTS[i].col*GRID_SIZE, VALID_POINTS[i].row*GRID_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+			//// By default its black, lets change its attributes
+			//rect.attr({
+			//	id: "BkGrid_" + VALID_POINTS[i].col + "_" + VALID_POINTS[i].row,
+			//	fill: VALID_BK_COLOR,
+			//	stroke: HOVER_OUT_BK_STROKE,
+			//	strokeWidth: 1
+			//});
+			
+			var rect = document.createElementNS(svgNS, 'rect');   
+			rect.setAttribute('id', "BkGrid_" + VALID_POINTS[i].col + "_" + VALID_POINTS[i].row);   
+			rect.setAttribute('x', VALID_POINTS[i].col*GRID_SIZE);   
+			rect.setAttribute('y', VALID_POINTS[i].row*GRID_SIZE);   
+			rect.setAttribute('width', BLOCK_SIZE);   
+			rect.setAttribute('height', BLOCK_SIZE);   
+			rect.setAttribute('fill', VALID_BK_COLOR);  
+			rect.setAttribute('stroke', HOVER_OUT_BK_STROKE);   
+			rect.setAttribute('stroke-width', 1);   
+			//rect.setAttribute('fill-opacity', '0');   
+			//rect.setAttribute('pointer-events', 'all');  
+			setBkRectEvent(rect);
+		
+			svgGroup.appendChild(rect);
+		}
+		svgRoot.appendChild(svgGroup);
+		rotateElemByAngle(svgGroup, 250, 0, PI/4, 0, 0);
+	}
+	
+	function drawGroups()
+	{
+		var len = brainPuzzleBlocks.length;
+		for(var i=0; i<len; i++)
+		{	
+		
+			//alert(brainPuzzleBlocks[i].name);
+			var group = brainPuzzleBlocks[i];
+			var ptLen = group.points.length;
+			var svgGroup = document.createElementNS(svgNS, 'g');   
+			svgGroup.setAttribute('id', brainPuzzleBlocks[i].name);   			
+   
+			for(var j = 0; j<ptLen; j++)
+			{
+				var pt = group.points[j];
+				//var rect = frontSvg.rect(pt.x*GRID_SIZE , pt.y*GRID_SIZE , BLOCK_SIZE, BLOCK_SIZE);
+				//
+				//// By default its black, lets change its attributes
+				//rect.attr({
+				//	fill: group.color,
+				//	stroke: "blue",
+				//	strokeWidth: 2
+				//});
+				
+				var rect = document.createElementNS(svgNS, 'rect');   
+				//rect.setAttribute('id', 'svgBackground');   
+				rect.setAttribute('x', pt.x*GRID_SIZE);   
+				rect.setAttribute('y', pt.y*GRID_SIZE);   
+				rect.setAttribute('width', BLOCK_SIZE);   
+				rect.setAttribute('height', BLOCK_SIZE);   
+				rect.setAttribute('fill', group.color);   
+				//rect.setAttribute('fill-opacity', '0');   
+				//rect.setAttribute('pointer-events', 'all');  
+
+				svgGroup.appendChild(rect);
+			}
+			setBlockEvent(svgGroup);				
+		
+			svgRoot.appendChild(svgGroup); 	
+			resetGroupMatrix(i);
+		}
+	}
+	
+	var canvas, context;
+	function showBkImg()
+	{	
+		canvas = document.getElementById("background");
+		context = canvas.getContext("2d");
+
+		canvas.width = 800;
+		canvas.height = 600;
+		canvas.style.width = window.innerWidth + 'px';
+		canvas.style.height = window.innerHeight + 'px';
+		
+		context.fillStyle = '#ff00ff';
+		//context.fillRect(0, 0, canvas.width(),canvas.height());
+	
+		bkImg = new Image(); 
+		bkImg.src = "../res/interface/Button.png";    
+		
+		bkImg.onload = function()
+		{  
+			context.drawImage(bkImg, 0, 0, canvas.width, canvas.height); 
+		};  
+	}      
+ 
+	window.onresize = function() {
+
+		canvas.style.width = window.innerWidth + 'px';
+		canvas.style.height = window.innerHeight + 'px';
+		context.fillStyle = '#ff00ff';
+		//context.fillRect(0, 0, canvas.width(), canvas.height());
+		context.drawImage(bkImg, 0, 0, canvas.width, canvas.height); 
+	};
+	
+	window.onload = function() 
+	{
+		svgRoot = document.getElementById('svgRoot');
+		testCircle = document.getElementById('c1');
+		
+		//初始化有效点和背景矩阵
+		initValidPoints();
+		BK_GRIDS = initBrainPuzzleGrids();
+
+		//Draw GUI
+		drawBkRects();
+		drawGroups();
+		
+		//Add drag/drop
+		addHammer();
+		
+		//Show background image
+		showBkImg();
+	}
+	
+</script>  
+</head>  
+  
+<body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
+	<canvas id="background" style="position:absolute">Your browser not support HTML5, please upgrade.</canvas> 
+	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+	</svg>
+	<input type="button" onclick="resetGame()" style="position:absolute;left:200px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Reset Game">
+    <input type="button" onclick="startGame()" style="position:absolute;left:320px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start Game">
+
+</body>   
+</html>  
