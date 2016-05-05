@@ -176,7 +176,7 @@
 	{
 		var bkGroup = document.getElementById("bkRects");
 		var bkMatrix = bkGroup.getCTM();
-		var rMatrix = reverseMatrix(bkMatrix);
+		var rMatrix = bkMatrix.inverse(); //reverseMatrix(bkMatrix);
 		console.log(rMatrix);
 		
 		var transMatrix = elem.getCTM();
@@ -186,37 +186,40 @@
 		//alert(nodes.length);
 		
 		var pos = [];
-		var offsetX = 0, offsetY = 0;
+		var offsetPos = {x:0 , y:0 };
 		for(var i = 0; i < nodes.length; i++)
 		{
 			var x = Number(nodes.item(i).getAttributeNS(null, "x")) ;
 			var y = Number(nodes.item(i).getAttributeNS(null, "y")) ;
 			var org1 = {x:x , y:y };
-			var org2 = {x:x+ GRID_SIZE, y:y+ GRID_SIZE}
-			console.log(org1, org2);
+			var org2 = {x:x + GRID_SIZE, y:y + GRID_SIZE}
+			//console.log(org1, org2);
+			
 			var dest1 = getTransformPoint(org1, transMatrix);
 			var dest2 = getTransformPoint(org2, transMatrix);
 			
 			//Reverse transform by bkGroup's matrix
 			dest1 = getTransformPoint(dest1, rMatrix);
 			dest2 = getTransformPoint(dest2, rMatrix);
+			//console.log(dest1, dest2);
 			
-			
-			console.log(dest1, dest2);
 			var newPos = getColRow((dest1.x + dest2.x)/2, (dest1.y + dest2.y)/2);
-			console.log(newPos);
+			//console.log(newPos);
 			var newCol = newPos.col;
 			var newRow = newPos.row;
+			
 			
 			if(i==0) //依靠矩形的中间点来判断位置和偏移量
 			{
 				org1 = {x:newCol*GRID_SIZE , y:newRow *GRID_SIZE};
-				org2 = {x:newCol*GRID_SIZE + BLOCK_SIZE , y:newRow*GRID_SIZE + BLOCK_SIZE};
+				org2 = {x:newCol*GRID_SIZE + GRID_SIZE , y:newRow*GRID_SIZE + GRID_SIZE};
 				//org1 = getTransformPoint(org1, bkMatrix);
 				//org2 = getTransformPoint(org2, bkMatrix);
 			
-				offsetX = (org1.x + org2.x)/2 - (dest1.x + dest2.x)/2;
-				offsetY = (org1.y + org2.y)/2 - (dest1.y + dest2.y)/2;
+				offsetPos.x = (org1.x + org2.x)/2 - (dest1.x + dest2.x)/2;
+				offsetPos.y = (org1.y + org2.y)/2 - (dest1.y + dest2.y)/2;
+				
+				console.log(newCol, newRow, offsetPos);
 			}
 			
 			pos.push(newPos);
@@ -235,7 +238,19 @@
 			if(pp.addBlock(blockIndex, pos)) //Record as problem's initial block
 			{
 				highlightBlock(pos, brainPuzzleBlocks[blockIndex].color, 2);
-				//moveElem(elem, offsetX, offsetY); //Move element to exact position
+	
+				//Apply rMatrix;
+				var newMatrix = rMatrix.multiply(elem.getCTM()); //.translate(offsetPos.x, offsetPos.y); //.multiply(bkMatrix);
+				var transformStr = matrixToStr(newMatrix);
+				elem.setAttributeNS(null, "transform", transformStr);
+				
+				//Move by offset;
+				moveElem(elem, offsetPos.x, offsetPos.y);
+				
+				//Apply bkMatrix
+				newMatrix = bkMatrix.multiply(elem.getCTM());
+				transformStr = matrixToStr(newMatrix);
+				elem.setAttributeNS(null, "transform", transformStr);
 			}
 		}
 		else //删除无效放置的块
@@ -528,7 +543,7 @@
 			this.setAttributeNS(null, "stroke", "black");
 			this.setAttributeNS(null, "stroke-width", 3); 
 			var idStr = this.getAttributeNS(null, "id"); 
-			console.log('Mouse over ' + idStr);
+			//console.log('Mouse over ' + idStr);
 
 		}; 
 		elem.onmouseout = function(){ 
@@ -545,7 +560,7 @@
 			this.setAttributeNS(null, "stroke", "red");
 			this.setAttributeNS(null, "stroke-width", 3); 
 			var idStr = this.getAttributeNS(null, "id"); 
-			console.log('Mouse over ' + idStr);
+			//console.log('Mouse over ' + idStr);
 
 		}; 
 		elem.onmouseout = function(){ 
