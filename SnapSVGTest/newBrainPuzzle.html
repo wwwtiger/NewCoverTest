@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <style type="text/css">
 	* { margin: 0; padding: 0; }
@@ -30,7 +30,7 @@
 
 	var bkSvg;
 	var frontSvg;
-	var svgRoot, testCircle;
+	var svgRoot, svgMenu, testCircle;
 	var pp = new PuzzleProblem(); //问题列表
 
 	function resetGroupMatrix(blockIndex)
@@ -333,9 +333,104 @@
 		}
 	}
 
+	function showLoadScreen()
+	{
+	}
+	
+	function setSpecialBlockEvent(elem)
+	{
+		elem.onclick = function(){ 
+			var idStr = this.getAttributeNS(null, "id"); 
+			//alert(idStr);
+			var ignoreIndex = Number(idStr.substr(1));
+			setIgnoreBlock(ignoreIndex);
+			svgMenu.setAttributeNS(null, "display", "none"); 
+		}; 
+		
+		elem.onmouseover = function(){
+			
+			//this.setAttributeNS(null, "fill-opacity", "0.5"); 
+			this.setAttributeNS(null, "stroke", "black");
+			this.setAttributeNS(null, "stroke-width", 3); 
+			
+			//console.log('Mouse over ' + idStr);
+
+		}; 
+		elem.onmouseout = function(){ 
+			//this.setAttributeNS(null, "fill-opacity", "0");
+			this.setAttributeNS(null, "stroke", null);
+			this.setAttributeNS(null, "stroke-width", 0); 
+		}; 
+	}
+	
+	//var specialList = [0, 9, 10, 11]; //['A', 'J', 'S', 'R'];
+	var specialList = [0, 9, 11]; //['A', 'J', 'R'];
+
+	function drawSpecialGroups()
+	{
+		//var bkRect = document.createElementNS(svgNS, 'rect');   
+		////rect.setAttribute('id', 'svgBackground');   
+		//bkRect.setAttribute('x', 0);   
+		//bkRect.setAttribute('y', 0);   
+		//bkRect.setAttribute('width', '100%');   
+		//bkRect.setAttribute('height', '100%');   
+		//bkRect.setAttribute('fill', 'grey');   
+		//svgMenu.appendChild(bkRect); 
+		
+		for(var i=0; i<specialList.length; i++)
+		{	
+			var blockIndex = specialList[i];
+
+			var svgGroup = document.createElementNS(svgNS, 'g');   
+			svgGroup.setAttribute('id', 'S'+ String(blockIndex));   			
+
+			var group = brainPuzzleBlocks[blockIndex];
+			var ptLen = group.points.length;
+   
+			for(var j = 0; j<ptLen; j++)
+			{
+				var pt = group.points[j];
+				
+				var rect = document.createElementNS(svgNS, 'rect');   
+				//rect.setAttribute('id', 'svgBackground');   
+				rect.setAttribute('x', pt.x*GRID_SIZE);   
+				rect.setAttribute('y', pt.y*GRID_SIZE);   
+				rect.setAttribute('width', BLOCK_SIZE);   
+				rect.setAttribute('height', BLOCK_SIZE);   
+				rect.setAttribute('fill', group.color);   
+
+				svgGroup.appendChild(rect);
+			}
+			setSpecialBlockEvent(svgGroup);				
+		
+			//rotateElemByAngle(svgGroup, count*200+300, 300, PI/2, 0, 0);
+			moveElem(svgGroup, i*300+200, 300);
+			svgMenu.appendChild(svgGroup); 	
+		}
+	}
+	
+	function setIgnoreBlock(blockIndex)
+	{
+		pp.ignoredIndex = blockIndex;
+		
+		//Reset block display attribute
+		for(var i=0; i<specialList.length; i++)
+		{	
+			var group = brainPuzzleBlocks[specialList[i]];
+			var svgGroup = document.getElementById(group.name);
+			if(svgGroup != null)
+			{
+				if(specialList[i] == blockIndex)
+					svgGroup.setAttributeNS(null, "display", "none"); 
+				else
+					svgGroup.setAttributeNS(null, "display", "all"); 
+			}
+		}
+	}
+	
 	function resetGame()	
 	{	
-		console.log('Reset...');
+		console.log('Reset game...');
 		//findAllPossiblePos();
 		//findSpecificSolution(problem_218);
 		pp.reset();
@@ -344,8 +439,24 @@
 		{
 			resetGroupMatrix(i);
 		}
+		
+		//Show menu
+		//document.body.removeChild(svgMenu);
+		//document.body.appendChild(svgMenu);
+		svgMenu.setAttributeNS(null, "display", "all"); 
 	}	
 
+	function newGame()	
+	{	
+		console.log('New game...');
+		pp.reset();
+		
+		for(i in brainPuzzleBlocks)
+		{
+			resetGroupMatrix(i);
+		}
+	}
+	
 	function startGame()	
 	{	
 		console.log('Start...');
@@ -669,8 +780,24 @@
 		bkImg.onload = function()
 		{  
 			context.drawImage(bkImg, 0, 0, canvas.width, canvas.height); 
+			showTipsOnBoard();
 		};  
-	}      
+	}    
+
+	var boardFonts = ["normal lighter 25px cursive","normal lighter 20px cursive","normal lighter 15px cursive"];
+	function showBoard(ctx, text, fontIndex, color, cx, cy)
+	{
+		ctx.font = boardFonts[fontIndex];
+		ctx.fillStyle = color;
+		ctx.fillText(text, cx, cy);
+	}
+	
+	function showTipsOnBoard()
+	{
+		showBoard(context, "Brain puzzle box: a HTML5 demo for SVG&CANVAS", 0, '#ff8800', 10, 30);
+		showBoard(context, "Drag to move; Double-click to rotate; Right double-click to flip", 1, '#A8ff00', 10, 60);
+		showBoard(context, "Arthur: wang_zhaoyan2000@163.com", 2, '#008800', 10, 80);
+	}
  
 	window.onresize = function() {
 
@@ -679,11 +806,13 @@
 		context.fillStyle = '#ff00ff';
 		//context.fillRect(0, 0, canvas.width(), canvas.height());
 		context.drawImage(bkImg, 0, 0, canvas.width, canvas.height); 
+		showTipsOnBoard();
 	};
 	
 	window.onload = function() 
 	{
 		svgRoot = document.getElementById('svgRoot');
+		svgMenu = document.getElementById('svgMenu');
 		testCircle = document.getElementById('c1');
 		
 		//初始化有效点和背景矩阵
@@ -699,6 +828,8 @@
 		
 		//Show background image
 		showBkImg();
+		
+		drawSpecialGroups();
 	}
 	
 </script>  
@@ -708,8 +839,12 @@
 	<canvas id="background" style="position:absolute">Your browser not support HTML5, please upgrade.</canvas> 
 	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 	</svg>
-	<input type="button" onclick="resetGame()" style="position:absolute;left:200px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Reset Game">
-    <input type="button" onclick="startGame()" style="position:absolute;left:320px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Start Game">
-
+	<input type="button" onclick="resetGame()" style="position:absolute;left:100px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="重置保留块">
+	<input type="button" onclick="newGame()" style="position:absolute;left:220px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="开始新游戏">
+    <input type="button" onclick="startGame()" style="position:absolute;left:340px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="查看答案">
+	<svg id="svgMenu" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+		<rect x="0" y="0" width="100%" height="100%" fill='grey'></rect>
+		<text x="180" y="110" font-size="80" font-family="Monotype Corsiva" fill="yellow" stroke="black">请选择保留的块</text>
+	</svg>
 </body>   
 </html>  

@@ -1,4 +1,4 @@
-//Specific solution with C, F, H
+﻿//Specific solution with C, F, H
 //		solutionStack.push({blockIndex: 2, blockName: 'C', resultIndex: 0, 
 //							pos:[{col:0, row:4},{col:1, row:4},{col:2, row:4} ,{col:3, row:4},{col:3, row:3}  ]});
 //		resultArray[2].useFlag = true; 
@@ -73,11 +73,13 @@ function findSolution()
 	
 	if(findOneSolution())
 	{
-		alert('Find puzzle solution');
+		//alert('Find puzzle solution');
+		alert('找到组合答案');
 	}
 	else
 	{
-		alert('Can not find puzzle solution');
+		//alert('Can not find puzzle solution');
+		alert('该组合没有答案');
 	}
 	
 	//Show solution
