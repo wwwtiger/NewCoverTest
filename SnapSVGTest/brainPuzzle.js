@@ -1,4 +1,4 @@
-//¥”∏¥‘”µΩºÚµ•µƒ∑≈÷√À≥–Ú
+Ôªø//¥”∏¥‘”µΩºÚµ•µƒ∑≈÷√À≥–Ú
 var piorityIndex = [6, 7, 8, 3, 4, 1, 2, 0, 9, 10, 11, 5];
 
 var brainPuzzleBlocks = [
@@ -395,15 +395,18 @@ function findFirstSolutionWithoutA()
 
 function loadProblem(problem)
 {
+	var list = [];
 	for(var i=0; i<problem.length; i++)
 	{
 		solutionStack.push(problem[i]);
 		resultArray[problem[i].blockIndex].useFlag = true;
 		
 		drawBlock(problem[i].pos, brainPuzzleBlocks[problem[i].blockIndex].color);
-		alert("Problem push " + problem[i].blockIndex);
+		//alert("Problem push " + problem[i].blockIndex);
+		list.push(brainPuzzleBlocks[problem[i].blockIndex].name);
 	}
 	
+	alert("ÊîæÁΩÆ‰∫Ü" + list.length + "Âùó, " + "ÂàÜÂà´‰∏∫" + list.join(', '));
 }
 
 function findSpecificSolution(problem)

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	* { margin: 0; padding: 0; }
+	html, body { height: 100%; width: 100%; }
+	
+	body
+	{
+		background-color: #000000;
+		-moz-user-select:   none; 
+	}
+</style>
+
+<script type="text/javascript" src="sudokuSteps.js"></script>  	
+
+<script type="text/javascript" > 
+	var svgns = "http://www.w3.org/2000/svg";
+	var selectedRect = null; //Current selected rect
+		
+	var DIMENSION = 9;
+	var RECT_H = 46;
+	var RECT_W = 46;
+	var RECT_INTERVAL = 50;
+	
+	var INTERVAL_LINE_OFFSET = 2;
+	var INTERVAL_LINE_STROKE_WIDTH = 6;
+	
+	var ORIGINAL_X = 50;
+	var ORIGINAL_Y = 50;
+	
+	var RECT_NAME = "R";
+	var TEXT_NAME = "T";
+	
+	var UNFINISHED = -1;
+	var FAIL = 0;
+	var SUCCESS = 1;
+	
+	var RECT_ORG_COLOR = "moccasin";
+	var RECT_MOUSE_OVER_COLOR = "green";
+	var RECT_SELECTED_COLOR = "white";
+	
+	var TEXT_FIXED_COLOR = "black";
+	var TEXT_ORG_COLOR = "grey";
+	var TEXT_SELECTED_COLOR = "red";
+	
+	var a = new Array();
+	
+	/*
+	//A little difficult one
+	a[0] = [0,6,0,3,0,4,7,0,0];
+	a[1] = [0,0,5,0,0,6,4,1,0];
+	a[2] = [9,0,0,0,5,0,0,0,3];
+	a[3] = [0,0,0,0,0,0,9,3,0];
+	a[4] = [1,0,0,0,3,0,8,0,0];
+	a[5] = [0,7,2,6,0,0,0,0,0];
+	a[6] = [0,0,0,4,0,7,0,0,0];
+	a[7] = [4,0,0,0,0,3,0,0,1];
+	a[8] = [0,2,3,0,0,0,0,8,0];
+	
+	//answer	
+	a[0] = [5,4,9, 1,7,3, 8,6,2];
+	a[1] = [3,6,7, 2,5,8, 1,9,4];
+	a[2] = [2,8,1, 9,4,6, 7,5,3];
+	
+	a[3] = [4,2,8, 3,9,7, 6,1,5];
+	a[4] = [9,1,6, 4,2,5, 3,7,8];
+	a[5] = [7,5,3, 6,8,1, 2,4,9];
+	
+	a[6] = [1,3,4, 8,6,9, 5,2,7];
+	a[7] = [8,9,5, 7,1,2, 4,3,6];
+	a[8] = [6,7,2, 5,3,4, 9,8,1];
+	
+	
+        a[0] = [5,0,0,0,0,0,8,0,2];
+	a[1] = [0,0,7,0,5,8,0,0,4];
+	a[2] = [2,0,1,0,0,0,7,5,3];
+	a[3] = [0,0,0,3,9,0,0,0,0];
+	a[4] = [9,1,6,4,0,5,3,7,8];
+	a[5] = [0,0,0,0,8,1,0,0,0];
+	a[6] = [1,3,4,0,0,0,5,0,7];
+	a[7] = [8,0,0,7,1,0,4,0,0];
+	a[8] = [6,0,2,0,0,0,0,0,1];
+	*/
+	
+	a[0] = [0,0,0,0,1,0,0,0,0];
+	a[1] = [3,0,0,0,0,0,5,9,8];
+	a[2] = [0,0,6,3,0,4,0,0,0];
+	a[3] = [0,0,0,7,0,0,0,0,5];
+	a[4] = [0,8,1,0,4,0,0,0,3];
+	a[5] = [0,0,0,0,0,0,0,2,0];
+	a[6] = [7,0,2,0,0,0,3,0,0];
+	a[7] = [0,0,0,9,0,7,0,0,0];
+	a[8] = [0,0,5,1,0,0,9,4,0];
+	
+	//Document and root
+	var svgRoot = null;
+
+	window.onload = function() 
+	{
+		//var str = processInput("123", "4", true);
+		//alert(str);
+		//str = processInput("789", "8", false);
+		//alert(str);
+		
+		svgRoot = document.getElementById('svgRoot');
+		svgRoot.onkeydown = tape; 
+		
+		svgRoot.addEventListener('focus', function(){
+			this.addEventListener('keydown',tape);
+		}, svgRoot);
+		
+		
+		//初始化有效点和背景矩阵
+		initialize();
+	}
+		
+	//Initialize canvas
+	function initialize() 
+	{
+		var rectGroup = document.createElementNS(svgns, "g");
+		//svgRoot.addEventListener("onkeydown", tape, false); //We must add keypress here to support FF1.5 
+
+		//Show date time
+		yy_datetime();
+		
+		//Create rects and text
+		for (var row = 0; row<DIMENSION; row++)
+		{
+			for (var col = 0; col<DIMENSION; col++)
+			{
+				//Create rect dynamically
+				var rect = document.createElementNS(svgns, "rect");
+				
+				rect.setAttributeNS(null, "id", RECT_NAME + row + col);
+				rect.setAttributeNS(null, "x", ORIGINAL_X + col*RECT_INTERVAL);
+				rect.setAttributeNS(null, "y", ORIGINAL_Y + row*RECT_INTERVAL);
+				rect.setAttributeNS(null, "width", RECT_W);
+				rect.setAttributeNS(null, "height", RECT_H);
+				rect.setAttributeNS(null, "fill", RECT_ORG_COLOR);
+				
+				if( a[row][col] == 0) //Accept user input
+				{
+					//Add event
+					rect.addEventListener("click", clickRect, false);
+					rect.addEventListener("mouseover", changeColor, false);
+					rect.addEventListener("mouseout", changeColor, false);
+				}
+				
+				//Add to doc
+				rectGroup.appendChild(rect);
+				
+				//Create text dynamically, get value from array       
+				var text = document.createElementNS(svgns, "text");
+								
+				text.setAttributeNS(null, "id", TEXT_NAME + row + col);
+				text.setAttributeNS(null, "x", ORIGINAL_X + col*RECT_INTERVAL + 20);
+				text.setAttributeNS(null, "y", ORIGINAL_Y + row*RECT_INTERVAL + 30);
+				
+				var myData;
+				
+				if( a[row][col] > 0) //Fixed
+				{
+					text.setAttributeNS(null, "font-size", "22pt");
+					text.setAttributeNS(null, "font-style", "bold");
+					text.setAttributeNS(null, "stroke", TEXT_FIXED_COLOR);
+					
+					myData = document.createTextNode( a[row][col] );
+				}
+				else //Accept user change
+				{
+					text.setAttributeNS(null, "font-size", "20pt");
+					text.setAttributeNS(null, "stroke", TEXT_ORG_COLOR);
+					text.setAttributeNS(null, "pointer-events", "none");
+					
+					myData = document.createTextNode("");
+				}
+				
+				//Add text node
+				text.appendChild(myData);
+				
+				//Add to doc	            
+				rectGroup.appendChild(text);
+			}
+		}
+		
+		svgRoot.appendChild(rectGroup);
+		
+		//Add horizontal seperate line
+		for(var k = 3; k < 9; k = k + 3)
+		{
+			var line = document.createElementNS(svgns, "line");
+				
+			line.setAttributeNS(null, "x1", ORIGINAL_X);
+			line.setAttributeNS(null, "y1", ORIGINAL_Y + k*RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "x2", ORIGINAL_X + DIMENSION * RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "y2", ORIGINAL_Y + k*RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "stroke", "brown");
+			line.setAttributeNS(null, "stroke-width", INTERVAL_LINE_STROKE_WIDTH);
+			
+			//Add to doc
+			svgRoot.appendChild(line);
+		}
+		
+		//Add vertical seperate line
+		for(var k = 3; k < 9; k = k + 3)
+		{
+			var line = document.createElementNS(svgns, "line");
+				
+			line.setAttributeNS(null, "x1", ORIGINAL_X + k*RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "y1", ORIGINAL_Y );
+			line.setAttributeNS(null, "x2", ORIGINAL_X + k*RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "y2", ORIGINAL_Y + DIMENSION*RECT_INTERVAL - INTERVAL_LINE_OFFSET );
+			line.setAttributeNS(null, "stroke", "brown");
+			line.setAttributeNS(null, "stroke-width", INTERVAL_LINE_STROKE_WIDTH);
+			
+			//Add to doc
+			svgRoot.appendChild(line);
+		}
+	}
+
+function changeColor(evt)
+{
+	var overRect = evt.target;
+	var type = evt.type;
+	
+	if(type == "mouseover")
+	{
+		overRect.setAttributeNS(null, "stroke", RECT_MOUSE_OVER_COLOR);
+		overRect.setAttributeNS(null, "stroke-width", 3);
+	}
+	else if(type == "mouseout")
+	{
+		overRect.setAttributeNS(null, "stroke", RECT_ORG_COLOR);
+		overRect.setAttributeNS(null, "stroke-width", 1);
+	}
+}
+
+function commit(evt)
+{	
+	setColorBack();
+	
+	var ret = isTarget();
+	
+	if( ret == UNFINISHED )
+	{
+		alert("unfinished");
+	}
+	else if( ret == FAIL )
+	{
+		alert("error");
+	}
+	else
+		alert("success");
+}
+	
+function isTarget()
+{
+	//Check whether player finished
+	for (var i = 0; i < DIMENSION; i++)
+	{
+		for (var j = 0; j < DIMENSION; j++)
+		{
+			if(a [i][j] == 0)
+				return UNFINISHED; //continue;
+		}
+	}
+	
+	//Check row
+	for (var i = 0; i < DIMENSION; i++)
+	{
+		var temp = [0,0,0,0,0,0,0,0,0];
+		for (var j = 0; j < DIMENSION; j++)
+		{
+			temp[ a[i][j]-1 ] = 1;
+		}
+		
+		for(var k = 0; k < DIMENSION; k++)
+		{
+			if(temp[k] != 1)
+				return FAIL;
+		}
+	}
+	
+	//Check col
+	for (var i = 0; i < DIMENSION; i++)
+	{
+		var temp = [0,0,0,0,0,0,0,0,0];
+		for (var j = 0; j < DIMENSION; j++)
+		{
+			temp[ a[j][i]-1 ] = 1;
+		}
+		
+		for(var k = 0; k < DIMENSION; k++)
+		{
+			if(temp[k] != 1)
+				return FAIL;
+		}
+	}
+	
+	//Check block
+	for(var bx = 0; bx < 3; bx++)
+	{
+		for(var by = 0; by < 3; by++)
+		{
+			var temp = [0,0,0,0,0,0,0,0,0];
+			for(var i = bx * 3; i < bx * 3 + 3; i++)
+			{
+				for(var j = by * 3; j < by * 3 + 3; j++)
+				{
+					//alert(bx + "," + by + "," + i + "," + j + "," + a[i][j]);
+					temp[ a[i][j]-1 ] = 1;
+				}
+			}
+			
+			for(var k = 0; k < DIMENSION; k++)
+			{
+				if(temp[k] != 1)
+					return FAIL;
+			}
+		}
+	}
+	
+	return SUCCESS; //Success
+}
+
+function processInput(originStr, inputChar, addFlag)
+{
+	var valueArray = [0,0,0,0,0,0,0,0,0];
+	for(var i=0; i<originStr.length; i++)
+	{	
+		var index = parseInt( originStr[i]) - 1;
+		valueArray[index] = 1;
+	}
+	
+	var inputIndex = parseInt( inputChar ) - 1;
+	if(addFlag)
+		valueArray[inputIndex] = 1;
+	else
+		valueArray[inputIndex] = 0;
+	
+	var resultStr = '';
+	for(var i=0; i<valueArray.length; i++)
+	{
+		if(valueArray[i] == 1)
+			resultStr += String(i+1);
+	}
+	
+	return resultStr;
+}
+
+function tape(evt)
+{	
+	if(selectedRect == null)
+		return;
+		
+	//var key = evt.charCode;
+	//if(key == null)
+		key = evt.keyCode;
+	var logStr = evt.charCode + " " + evt.keyCode;
+	
+	
+	//Get corresponding text object by ID
+	var id = selectedRect.getAttributeNS(null,"id").substr(1,2);
+	var row = parseInt( id.substr(0,1) );
+	var col = parseInt( id.substr(1,1) );
+	
+	var selectedText = document.getElementById(TEXT_NAME + id);
+	var originalStr = selectedText.firstChild.data;
+	
+	var e = evt ; //|| window.event;
+	var addFlag = true;
+	if (e.shiftKey)
+	{
+		logStr += ' with SHIFT';
+		addFlag = false;
+	}
+	//else if(e.altKey)
+	//	logStr += ' with ALT';
+	//else if(e.ctrlKey)  
+	//	logStr += ' with CTRL';
+	console.log(logStr);
+	//alert(logStr);
+	
+	if ( key == 32 || key == 48) //"SPACE" and 0 key to delete
+	{
+		selectedText.firstChild.data = "";
+		a[row][col] = 0;
+		evt.preventDefault(); 
+	}
+	else if( key > 48 && key <=57 )
+	{
+		var inputChar = String.fromCharCode(key);
+		var resultStr = processInput(originalStr, inputChar, addFlag); //Add or delete(SHIFT)
+		updateTextObjByPos(col, row, resultStr);
+		evt.preventDefault(); 
+	}
+}
+
+function setColorBack()
+{
+	if(selectedRect != null)
+	{
+		selectedRect.setAttributeNS(null, "stroke", "none");
+		selectedRect.setAttributeNS(null, "fill", RECT_ORG_COLOR);
+
+		var id = selectedRect.getAttributeNS(null,"id").substr(1,2);
+				
+		//Get corresponding text object by ID
+		var selectedText = document.getElementById(TEXT_NAME + id);
+		
+		//Change color to indicate user
+		if(selectedText != null)
+		{
+			selectedText.setAttributeNS(null, "stroke", TEXT_ORG_COLOR);
+		}
+		
+		selectedRect = null;
+	}
+}
+		
+function clickRect(evt) 
+{
+	setColorBack();
+		
+	//Get new target and target id
+	selectedRect = evt.target;
+	var id = selectedRect.getAttributeNS(null,"id").substr(1,2);
+		
+	//Get corresponding text object by ID
+	var selectedText = document.getElementById(TEXT_NAME + id);
+	
+	//Change color to indicate user
+	if(selectedText != null)
+	{
+		selectedText.setAttributeNS(null, "stroke", TEXT_SELECTED_COLOR);
+	}
+
+	selectedRect.setAttributeNS(null, "stroke", RECT_SELECTED_COLOR);
+	selectedRect.setAttributeNS(null, "fill", RECT_SELECTED_COLOR);
+}
+
+function updateTextObjByPos(col, row, value)
+{
+	var textObj = document.getElementById(TEXT_NAME + row + col);
+	if(textObj != null)
+	{
+		textObj.firstChild.data = value;
+		
+		if(value.length == 1)
+		{
+			a[row][col] = parseInt(value);
+			textObj.setAttributeNS(null, "font-size", "20pt");
+			textObj.setAttributeNS(null, "text-anchor","middle"); 
+		}
+		else
+		{
+			a[row][col] = 0;
+			textObj.setAttributeNS(null, "font-size", "10pt");
+			textObj.setAttributeNS(null, "text-anchor","start"); 
+		}	
+	}
+}
+
+function highlightBlock(pos, fillColor, strokeColor, strokeWidth) 
+{
+	if(pos[0] == 0) //Whole col
+	{
+		for(var i=0; i<9; i++)
+		{
+			var id = RECT_NAME + i + (pos[1]-1);
+			var rect = document.getElementById(id);
+			if(rect != null)
+			{
+				rect.setAttributeNS(null, "fill", fillColor);
+				rect.setAttributeNS(null, "stroke", strokeColor);
+				rect.setAttributeNS(null, "stroke-width", strokeWidth);
+			}
+		}
+	}
+	else if(pos[1] == 0) //Whole row
+	{
+		for(var i=0; i<9; i++)
+		{
+			var id = RECT_NAME + (pos[0]-1) + i;
+			var rect = document.getElementById(id);
+			if(rect != null)
+			{
+				rect.setAttributeNS(null, "fill", fillColor);
+				rect.setAttributeNS(null, "stroke", strokeColor);
+				rect.setAttributeNS(null, "stroke-width", strokeWidth);
+			}
+		}
+	}
+	else //Single one
+	{
+		var id = RECT_NAME + (pos[0]-1) + (pos[1]-1);
+		var rect = document.getElementById(id);
+		if(rect != null)
+		{
+			rect.setAttributeNS(null, "fill", fillColor);
+			rect.setAttributeNS(null, "stroke", strokeColor);
+			rect.setAttributeNS(null, "stroke-width", strokeWidth);
+		}
+	}
+}
+
+var currStep = 0;
+var onPlay = false;
+
+function clearDescText()
+{
+	var txtDesc = document.getElementById('desc');
+	if(txtDesc != null)
+		txtDesc.value = '';
+
+}
+
+function appendTextToDescText(txt)
+{
+	var txtDesc = document.getElementById('desc');
+	if(txtDesc != null)
+		txtDesc.value += txt + '\r\n';
+}
+
+
+function startPlay()
+{
+	if(onPlay)
+		return;
+	onPlay = true;	
+	currStep = 0;
+	
+	clearDescText();
+	appendTextToDescText('Start...');
+
+	playBySteps();
+}
+	
+function playBySteps()
+{
+	var prevStep;
+	if(currStep > 0) //Set back
+	{
+		prevStep = sudokuSteps[currStep - 1];
+		for(var i=0; i<prevStep.b.length; i++)
+			highlightBlock(prevStep.b[i], RECT_ORG_COLOR, "none", 0);
+		
+		for(var i=0; i<prevStep.t.length; i++)
+		{
+			var target = prevStep.t[i];
+			highlightBlock(target.pos, RECT_ORG_COLOR, "none", 0);
+		}	
+	}
+	
+	if(currStep >= sudokuSteps.length)
+	{
+		onPlay = false;
+		//alert('Play finished');
+		appendTextToDescText('End');
+		return;
+	}
+//var sudokuSteps = [ 
+//{ t:[{pos:[1,8], pv:[3], npv:[]}], b:[[0,7],[0,9]] },
+//{ t:[{pos:[3,2], pv:[4,6], npv[]}, {pos:[3,3], pv:[4,6], npv:[]}], b:[[2,6],[3,8]] },
+//];
+
+	var step = sudokuSteps[currStep];
+
+	//High light base
+	for(var i=0; i<step.b.length; i++)
+		highlightBlock(step.b[i], "yellow", "green", 5); 
+	
+	//High light target and set possible value
+	for(var i=0; i<step.t.length; i++)
+	{
+		var target = step.t[i];
+		highlightBlock(target.pos, "red", "green", 5);
+	
+		var resultStr = target.pv.join('');
+		updateTextObjByPos(target.pos[1]-1, target.pos[0]-1, resultStr);
+	}
+	
+	//Show step description
+	appendTextToDescText(step.d);
+	
+	currStep++;
+	setTimeout("playBySteps()", 3000);
+}
+
+function yy_datetime()
+{
+	var text;
+	text = document.getElementById("updateTime");
+		
+	var datetime,temp,date,time;
+	datetime = new Date().toLocaleString();
+	
+	temp = datetime.lastIndexOf(" ");
+	date = datetime.substring(0,temp);
+	time = datetime.substring(temp+1,datetime.length);
+	
+	text.firstChild.data = "Update time: " + date + " " + time;
+	
+	setTimeout("yy_datetime()",1000);
+}	
+
+</script>  
+</head>  
+  
+<body oncontextmenu="return false" onselectstart="return false" oncopy="return false">
+	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+		<text id="updateTime" x="200" y="520" style="font-size:10" fill="peru" > </text>
+	</svg>
+    <input type="button" onclick="commit()" style="position:absolute;left:320px;top:550px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="Commit">
+    <input type="button" onclick="startPlay()" style="position:absolute;left:400px;top:550px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="PlayAnimate">
+	<textarea  id='desc' style="position:absolute;left:580px;top:50px;" rows="30" cols="40">
+	</textarea>
+</body>   
+</html>  
+
