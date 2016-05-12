@@ -59,10 +59,22 @@
 		console.log(result);
 		*/
 		
-		var max = getMaxScore();
-		console.log(max);
+		//var max = getMaxScore();
+		//console.log(max);
+		
+		var jsonTxt = jsonTest();
+		console.log(jsonTxt);
 	}
 	
+	function jsonTest()
+	{
+		var str = "";
+		var obj ={"name":"sb", "age":100};
+		//遍历方法：
+		for(var p in obj)
+		   str = str+obj[p]+",";
+		return str;
+	}
 	
 	//330
 	var minPatches = function(nums, n) {

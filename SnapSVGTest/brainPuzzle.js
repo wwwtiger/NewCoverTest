@@ -214,7 +214,7 @@ function getPointNeighbourCount(tempGrids, col, row)
 	return neighbours;
 }
 
-//在删除被占用的点后，是否存在孤立块（小于2）
+//鏍规嵁鐭╅樀妫�鏌ユ槸鍚︽湁灏忎簬绛変簬2涓潡鐨勫绔嬬偣
 function hasSinglePoint(tempGrids, deletePos)
 {
 	for(var i=0; i<deletePos.length; i++)
