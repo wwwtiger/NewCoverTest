@@ -10,6 +10,7 @@
 		-moz-user-select:   none; 
 	}
 </style>
+<script type="text/javascript" src="solutionTree.js"></script>  	
 <script type="text/javascript" src="problems.js"></script>  	
 <script type="text/javascript" src="brainPuzzle.js"></script>  
 <script type="text/javascript" src="commonFuncs.js"></script>  
@@ -237,6 +238,11 @@
 		{
 			if(pp.addBlock(blockIndex, pos)) //Record as problem's initial block
 			{
+				if(pp.initialBlocks.length == (brainPuzzleBlocks.length - 1) )
+					playSound(winSound, 0, 0.8);
+				else
+					playSound(mergeSound, 0, 0.8);
+
 				highlightBlock(pos, brainPuzzleBlocks[blockIndex].color, 2);
 	
 				//Apply rMatrix;
@@ -253,8 +259,11 @@
 				elem.setAttributeNS(null, "transform", transformStr);
 			}
 		}
-		else //删除无效放置的块
+		else //
+		{
 			pp.deleteBlock(blockIndex);
+			playSound(splatSound, 0, 0.8);
+		}
 	}
 	
 	//var currentProblem = [];
@@ -329,7 +338,7 @@
 			}
 			
 			console.log(resultArray);
-			console.log('Find all positions ');
+			console.log('Find all possible positions ');
 		}
 	}
 
@@ -413,6 +422,15 @@
 	{
 		pp.ignoredIndex = blockIndex;
 		
+		//Reset result array used flag
+		for(var i=0; i<resultArray.length; i++)
+		{
+			if(i == blockIndex)
+				resultArray[i].usedFlag = true;
+			else
+				resultArray[i].usedFlag = false;
+		}
+		
 		//Reset block display attribute
 		for(var i=0; i<specialList.length; i++)
 		{	
@@ -461,6 +479,7 @@
 	{	
 		console.log('Start...');
 		findAllPossiblePos();
+		
 		pp.findSolution();
 	}	
 	
@@ -799,6 +818,75 @@
 		showBoard(context, "Arthur: wang_zhaoyan2000@163.com", 2, '#008800', 10, 80);
 	}
  
+	function loadSound()
+	{       
+		var soundType = "mp3"; //For IE, Chrome and Safari      
+		if( (Sys.firefox) || (Sys.opera) )
+			soundType = "ogg";
+		
+		//Create and load sounds 
+		try
+		{
+			mergeSound = new Audio("../res/sounds/points." + soundType);
+			splatSound = new Audio("../res/sounds/splat." + soundType);
+			winSound = new Audio("../res/sounds/winmusic." + soundType);
+		}
+		catch(err)
+		{
+			var txt="There was an error on this page.\n\n";
+			txt+="Load sound failed. Error description: " + err.description + "\n\n";
+			txt+="If your browser is SAFARI, please install QUICKTIME.\n\n";
+			txt+="Click OK to continue.\n\n";
+			alert(txt);
+		}
+	}
+
+	var SYS_MUTE = 0;
+
+	function playSound(sound, loop, volume)
+	{
+		if(SYS_MUTE)
+			return;
+			
+		try{
+			sound.loop = loop;
+			sound.volume = volume;
+			
+			try{
+				sound.currentTime = 0;
+			}catch(err){}
+			
+			sound.play();
+		}
+		catch(err){}
+	}
+
+	//测试将对象保存到本地文件，仅限 IE
+	function SaveInfoToFile(folder, fileName, saveObj) 
+	{
+		var filePath = folder + fileName;
+		//var fileInfo = "hahahaha";
+		var fso = new ActiveXObject("Scripting.FileSystemObject");
+		var file = fso.CreateTextFile(filePath, true);
+		file.Write(saveObj);
+		file.Close();
+	}
+	
+	function allSolutionTest()
+	{
+		findAllPossiblePos();
+		resultArray[pp.ignoredIndex].useFlag = true;
+		//SaveInfoToFile("d:/", "puzzleResult.txt", JSON.stringify(resultArray));
+		
+		initValidMap();
+		allSolutionList = [];
+		allSolutionStack = [];
+		findAllSolutions();
+		var str = "Find finished, ignore index: " + String(pp.ignoredIndex) 
+				+ ", total solution count: " + String(allSolutionList.length);
+		alert(str);
+	}
+ 
 	window.onresize = function() {
 
 		canvas.style.width = window.innerWidth + 'px';
@@ -815,6 +903,8 @@
 		svgMenu = document.getElementById('svgMenu');
 		testCircle = document.getElementById('c1');
 		
+		loadSound();
+
 		//初始化有效点和背景矩阵
 		initValidPoints();
 		BK_GRIDS = initBrainPuzzleGrids();
@@ -842,6 +932,7 @@
 	<input type="button" onclick="resetGame()" style="position:absolute;left:100px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="重置保留块">
 	<input type="button" onclick="newGame()" style="position:absolute;left:220px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="开始新游戏">
     <input type="button" onclick="startGame()" style="position:absolute;left:340px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="查看答案">
+    <input type="button" onclick="allSolutionTest()" style="position:absolute;left:460px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="测试">
 	<svg id="svgMenu" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 		<rect x="0" y="0" width="100%" height="100%" fill='grey'></rect>
 		<text x="180" y="110" font-size="80" font-family="Monotype Corsiva" fill="yellow" stroke="black">请选择保留的块</text>
