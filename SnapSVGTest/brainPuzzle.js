@@ -312,7 +312,7 @@ function testGroupOnGrid(index)
 	var validCount = 0;
 	var validResult = {blockName:brainPuzzleBlocks[index].name, useFlag: false, result:[]}; //Ãû³Æ£¬ÊÇ·ñÔÚ½â¾ö·½·¨ÖĞÊ¹ÓÃ£¬[{½Ç¶È£¬Î»ÖÃ}]
 	
-	for(var i=0; i<2; i++) //¾µÏñ
+	for(var i=0; i<2; i++) //MIRROR
 	{
 		if(((brainPuzzleBlocks[index].name == "F") || 
 			(brainPuzzleBlocks[index].name == "G") || 
@@ -320,12 +320,13 @@ function testGroupOnGrid(index)
 			(brainPuzzleBlocks[index].name == "I") || 
 			(brainPuzzleBlocks[index].name == "J") || 
 			(brainPuzzleBlocks[index].name == "S") ) 
-			&& (i == 1)) //F G H I J S²»ĞèÒª¾µÏñ
+			&& (i == 1)) //F G H I J S å¯ä»¥é€šè¿‡æ—‹è½¬å¾—åˆ°æ‰€æœ‰çŠ¶æ€ï¼Œä¸éœ€è¦é•œåƒ
 			continue;
 			
-		for(var j=0; j<angles.length; j++) //Ğı×ª
+		for(var j=0; j<angles.length; j++) //ROTATE
 		{
-			if((brainPuzzleBlocks[index].name == "J") && ((j == 2) || (j == 3))) //JÎª¶Ô³Æ¼¸ºÎÌå
+			if( ((brainPuzzleBlocks[index].name == "J") || (brainPuzzleBlocks[index].name == "R"))
+				&& ((j == 2) || (j == 3)) ) //Jï¼ŒRåªéœ€è¦ä¸¤æ¬¡æ—‹è½¬
 				continue;
 				
 			var angle = angles[j];
