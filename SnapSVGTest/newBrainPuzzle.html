@@ -10,6 +10,10 @@
 		-moz-user-select:   none; 
 	}
 </style>
+<script type="text/javascript" src="AllSolutionA.js"></script>  	
+<script type="text/javascript" src="AllSolutionJ.js"></script>  	
+<script type="text/javascript" src="AllSolutionR.js"></script>  	
+
 <script type="text/javascript" src="solutionTree.js"></script>  	
 <script type="text/javascript" src="problems.js"></script>  	
 <script type="text/javascript" src="brainPuzzle.js"></script>  
@@ -239,7 +243,10 @@
 			if(pp.addBlock(blockIndex, pos)) //Record as problem's initial block
 			{
 				if(pp.initialBlocks.length == (brainPuzzleBlocks.length - 1) )
+				{
 					playSound(winSound, 0, 0.8);
+					alert("放置成功！");
+				}
 				else
 					playSound(mergeSound, 0, 0.8);
 
@@ -299,8 +306,9 @@
 			var rect = document.getElementById(id);
 			if(rect != null)
 			{
-				rect.setAttributeNS(null, "stroke", color);
-				rect.setAttributeNS(null, "stroke-width", width);
+				//rect.setAttributeNS(null, "stroke", color);
+				//rect.setAttributeNS(null, "stroke-width", width);
+				rect.setAttributeNS(null, "fill", color);
 			}
 		}
 	}
@@ -449,18 +457,8 @@
 	function resetGame()	
 	{	
 		console.log('Reset game...');
-		//findAllPossiblePos();
-		//findSpecificSolution(problem_218);
-		pp.reset();
-		
-		for(i in brainPuzzleBlocks)
-		{
-			resetGroupMatrix(i);
-		}
-		
-		//Show menu
-		//document.body.removeChild(svgMenu);
-		//document.body.appendChild(svgMenu);
+		randomIndex = -1;
+		newGame();
 		svgMenu.setAttributeNS(null, "display", "all"); 
 	}	
 
@@ -468,21 +466,21 @@
 	{	
 		console.log('New game...');
 		pp.reset();
-		
+		showAllBlocks();
 		for(i in brainPuzzleBlocks)
 		{
 			resetGroupMatrix(i);
 		}
 	}
 	
-	function startGame()	
+	function showGameSolution()	
 	{	
-		console.log('Start...');
 		findAllPossiblePos();
-		
-		pp.findSolution();
-	}	
-	
+		if(confirm("真的直接看答案了?"))
+		{
+			pp.findSolution();
+		}	
+	}
 	
 	function resetBkGrid()
 	{
@@ -872,15 +870,133 @@
 		file.Close();
 	}
 	
+	var allSolutionIndex = 0;
+	
+	function showAllBlocks()
+	{
+		//Reset block display attribute
+		for(var i=0; i<brainPuzzleBlocks.length; i++)
+		{	
+			var group = brainPuzzleBlocks[i];
+			var svgGroup = document.getElementById(group.name);
+			if(svgGroup != null)
+			{
+				if(i == pp.ignoredIndex)
+					svgGroup.setAttributeNS(null, "display", "none"); 
+				else
+					svgGroup.setAttributeNS(null, "display", "all"); 
+			}
+		}
+	}
+	var randomIndex = -1;
+	var randomUsedArray = [];
+	
+	function createRandomArray(count, deleteNum)
+	{
+		var result = [];
+		for(var i=0; i<count; i++)
+			result.push(i);
+		if(deleteNum >= count)
+			return result;
+			
+		for(var i=0; i<deleteNum; i++)
+		{
+			var index = Math.round(Math.random() * result.length);
+			result.splice(index, 1);
+		}
+		return result;
+	}
+	
+	function randomGame()
+	{
+		findAllPossiblePos();
+		resultArray[pp.ignoredIndex].useFlag = true;
+		
+		var allSolutionArray = null;
+		if(pp.ignoredIndex == 0)
+			allSolutionArray = ALL_SOLUTIONS_A;
+		else if(pp.ignoredIndex == 9)
+			allSolutionArray = ALL_SOLUTIONS_J;
+		else
+			allSolutionArray = ALL_SOLUTIONS_R;
+
+		//New random game or restore last one
+		if( !((randomIndex != -1) && (confirm("恢复上一次随机的放置？")) ))
+		{
+			//Get a random index and delete some block on solution
+			randomIndex = Math.round(Math.random() * allSolutionArray.length);
+			var randomUsedNumber = 11 - Math.ceil((Math.random()+0.2) * 5);
+			randomUsedArray = createRandomArray(11, randomUsedNumber);
+		}
+		
+		//Start new game
+		newGame();
+		var stack = allSolutionArray[randomIndex];
+
+		//Update problem
+		for(var i=0; i<randomUsedArray.length; i++)
+		{
+			var pos = resultArray[stack[randomUsedArray[i]].blockIndex].result[stack[randomUsedArray[i]].posIndex].pos;
+			pp.addBlock(stack[randomUsedArray[i]].blockIndex, pos);
+		}
+
+		//Show blocks on bk grid and hide used blocks
+		for(var i=0; i<randomUsedArray.length; i++)
+		{	
+			var pos = resultArray[stack[randomUsedArray[i]].blockIndex].result[stack[randomUsedArray[i]].posIndex].pos;
+			var color = brainPuzzleBlocks[stack[randomUsedArray[i]].blockIndex].color;
+			drawBlock(pos, color);
+			
+			//Hide used block
+			var group = brainPuzzleBlocks[stack[randomUsedArray[i]].blockIndex];
+			var svgGroup = document.getElementById(group.name);
+			if(svgGroup != null)
+			{
+				svgGroup.setAttributeNS(null, "display", "none"); 
+			}
+		}
+	}
+	
 	function allSolutionTest()
 	{
 		findAllPossiblePos();
 		resultArray[pp.ignoredIndex].useFlag = true;
-		//SaveInfoToFile("d:/", "puzzleResult.txt", JSON.stringify(resultArray));
+		var allSolutionArray = null;
+		if(pp.ignoredIndex == 0)
+			allSolutionArray = ALL_SOLUTIONS_A;
+		else if(pp.ignoredIndex == 9)
+			allSolutionArray = ALL_SOLUTIONS_J;
+		else
+			allSolutionArray = ALL_SOLUTIONS_R;
+		
+		//SaveInfoToFile("d:/", "allPossiblePos.js", JSON.stringify(resultArray));
+
+		//var pos = resultArray[11].result[21].pos;
+		//console.log(pos);
+		//pos = resultArray[11].result[65].pos;
+		//console.log(pos);
+		//
+		//if(allSolutionIndex < ALL_SOLUTIONS_A.length)
+		//{
+		//	drawOneSolution(ALL_SOLUTIONS_A[allSolutionIndex]);
+		//	allSolutionIndex++;
+		//	alert("Show solution A at " + allSolutionIndex);
+		//}
+		
+		for(var i=0; i<allSolutionArray.length; i++)
+		{
+			drawOneSolution(allSolutionArray[i]);
+			alert("Show solution at " + i + " of " + allSolutionArray.length);
+		}
+		
+		return;
+
 		
 		initValidMap();
 		allSolutionList = [];
 		allSolutionStack = [];
+		
+		
 		findAllSolutions();
 		var str = "Find finished, ignore index: " + String(pp.ignoredIndex) 
 				+ ", total solution count: " + String(allSolutionList.length);
@@ -930,9 +1046,10 @@
 	<svg id="svgRoot" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 	</svg>
 	<input type="button" onclick="resetGame()" style="position:absolute;left:100px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="重置保留块">
-	<input type="button" onclick="newGame()" style="position:absolute;left:220px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="开始新游戏">
-    <input type="button" onclick="startGame()" style="position:absolute;left:340px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="查看答案">
-    <input type="button" onclick="allSolutionTest()" style="position:absolute;left:460px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="测试">
+	<input type="button" onclick="newGame()" style="position:absolute;left:200px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="自创题目">
+    <input type="button" onclick="randomGame()" style="position:absolute;left:300px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="随机题目">
+	<input type="button" onclick="showGameSolution()" style="position:absolute;left:400px;top:600px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="查看答案">
+    <input type="button" onclick="allSolutionTest()" style="position:absolute;left:1200px;top:40px;height=50px;cursor:pointer;-moz-user-select:none;-webkit-user-select:none;" value="测试">
 	<svg id="svgMenu" width="100%" height="100%" style="position:absolute" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 		<rect x="0" y="0" width="100%" height="100%" fill='grey'></rect>
 		<text x="180" y="110" font-size="80" font-family="Monotype Corsiva" fill="yellow" stroke="black">请选择保留的块</text>
