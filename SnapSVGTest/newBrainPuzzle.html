@@ -244,6 +244,7 @@
 			{
 				if(pp.initialBlocks.length == (brainPuzzleBlocks.length - 1) )
 				{
+					randomIndex = -1; //Avoid show replay confirm dialog
 					playSound(winSound, 0, 0.8);
 					alert("放置成功！");
 				}
@@ -634,7 +635,12 @@
 				rotateElemByAngle(currObj, 0, 0, PI/2, cx, cy);
 			else
 				mirrorByLine(currObj, 0, 1, -cy);
-				
+			
+			var id = currObj.getAttributeNS(null, "id");
+			console.log(id + ' finished rotate');
+			var block = document.getElementById(id);
+			recordBlockPos(id, block);
+
 			currObj = null;
 		};
 		
