@@ -53,6 +53,17 @@
 		}
 	}
 	
+	function resetBlockEvent()
+	{
+		for(var i=0; i<brainPuzzleBlocks.length; i++)
+		{
+			var block = document.getElementById(brainPuzzleBlocks[i].name);
+			if(block != null)
+			{
+				block.setAttributeNS(null, "pointer-events", "all");
+			}
+		}
+	}
 	function drawSingleGroup(group, angle, mirrorX)
 	{
 		var ptLen = group.points.length;
@@ -588,7 +599,13 @@
 		
 		hammer.ondragend = function(ev) 
 		{	
-			var id = currObj.getAttributeNS(null, "id");
+			if(currObj == null) //Lost object during drag
+			{
+				resetBlockEvent(); //Avoid zombie block
+				return;
+			}
+			
+			id = currObj.getAttributeNS(null, "id");
 			console.log(id + ' finished dragging');
 			var block = document.getElementById(id);
 			recordBlockPos(id, block);
