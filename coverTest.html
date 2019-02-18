@@ -23,7 +23,7 @@
 <script type="text/javascript" src="js/canvasGui.js"></script> 
 <script type="text/javascript" src="js/hexagonMap.js"></script> 
 <script type="text/javascript" src="js/astarClass.js"></script> 
-<script type="text/javascript" src="brainPuzzle.js"></script> 
+
 <script type="text/javascript" > 
  
  
@@ -344,7 +344,7 @@
 		
 		showCoverDialog();
 		
-		playSound(soundList[3].obj, 1, 0.8);
+		//playSound(soundList[0].obj, 1, 0.8);
 	}
 	
 	function showCoverDialog() //Help dialog
@@ -367,8 +367,10 @@
 				return;
 				
 			this.down = 0;
-			this.parentWindow.close();
-			findPath(mapPara);
+			
+			playSound(soundList[0].obj, 1, 0.8);
+			//this.parentWindow.close();
+			//findPath(mapPara);
 		};
 		canvasWindow.addCtrl(closeBtn);
 		
@@ -417,6 +419,13 @@
 		canvasWindow.show();
 	}
 	
+	var soundList = [
+					{path: "sounds",  name: "Ultimate Battle",}, 
+					{path: "sounds",  name: "awooga",}, 
+					{path: "sounds",  name: "plant",}, 
+					];
+	
+		
 	function loadSound()
 	{
 		var soundType = "mp3"; //For IE, Chrome and Safari      
@@ -466,13 +475,7 @@
 	
 		
 	window.onload = function(){   
-		var PI = 3.14159;
-		var newCoordinate = rotateByPoint(2, 0, 0, 0, -PI / 2);
-		alert(newCoordinate);
-		
-		
-		var bpGrids = initBrainPuzzleGrids();
-		
+				
 		rowTest(3);
 	
 		checkBrowserType();
